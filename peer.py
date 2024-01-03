@@ -1,5 +1,6 @@
 import socket
-from utilities import LOG
+import utilities
+from time import time
 
 
 class Peer:
@@ -11,6 +12,8 @@ class Peer:
         self.ip_address = ip
         self.port = port
         self.socket = None
+        self.last_call = 0.0
+        self.healthy = False
         # self.number_of_pieces = number_of_pieces
         # self.bitfield = bitstring.BitArray(number_of_pieces)
 
@@ -18,7 +21,8 @@ class Peer:
         try:
             self.socket = socket.create_connection((self.ip_address, self.port), timeout=2)
             self.socket.setblocking(False)
-            LOG.info(f"Connection with peer {self.ip_address} established")
+            self.healthy = True
+            utilities.LOG.info(f"Connection with peer {self.ip_address} established")
             print(f"Connection to peer {self.ip_address} established")
 
         except TimeoutError:
@@ -36,8 +40,17 @@ class Peer:
 
         return True
 
-    def send_handshake(self):
-        pass
-
-
-
+    def send_message(self, msg):
+        self.healthy = False
+        try:
+            self.socket.send(msg)
+            self.healthy = True
+            self.last_call = time()
+        except ConnectionError as ce:
+            print(f"Connection error: {ce}")
+        except TimeoutError as te:
+            print(f"Timeout error: {te}")
+        except OSError as oe:
+            print(f"OS error: {oe}")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")

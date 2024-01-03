@@ -71,12 +71,3 @@ class Torrent:
             return tracker_response.text
         else:
             return "Error occurs"
-
-
-torrent_file = 'debian-12.4.0.iso.torrent'
-
-torrent_object = Torrent()
-torrent_object.load_file(torrent_file)
-response = torrent_object.request_to_tracker()
-
-print(response)
