@@ -14,8 +14,21 @@ class Peer:
         self.socket = None
         self.last_call = 0.0
         self.healthy = False
+        self.initial_communication_states = {
+            "handshake_sent": False,
+            "handshake_received": False,
+            "interested_sent": False,
+            "bitfield_received": False,
+        }
+        self.buffer = b""
         # self.number_of_pieces = number_of_pieces
         # self.bitfield = bitstring.BitArray(number_of_pieces)
+
+    def set_state(self, state, value=True):
+        self.initial_communication_states[state] = value
+
+    def get_state(self, state):
+        return self.initial_communication_states.get(state, False)
 
     def connect(self):
         try:
@@ -54,3 +67,6 @@ class Peer:
             print(f"OS error: {oe}")
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
+
+    def handle_handshake(self):
+        pass

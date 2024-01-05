@@ -1,7 +1,7 @@
+import utilities
 from torrent import Torrent
-from peer_manager import PeerManager
 from bcoding import bdecode
-import  utilities
+
 
 if __name__ == '__main__':
 
@@ -20,9 +20,10 @@ if __name__ == '__main__':
     decoded_response = bdecode(response)
     peers_list = decoded_response['peers']
 
+    from peer_manager import PeerManager
+
     # create PeerManager object
     manager = PeerManager()
     manager.connect_to_peers(peers_list)
 
-    manager.add_peers()
-    print(manager.handshaked_peers)
+    manager.initiate_handshake()
