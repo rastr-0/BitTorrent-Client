@@ -2,9 +2,8 @@
 # bdecode -> encoding
 from bcoding import bencode, bdecode
 from hashlib import sha1
-import random
-import string
 import requests
+from utilities import generate_client_id
 
 
 class Torrent:
@@ -36,12 +35,7 @@ class Torrent:
         self.left = self.file_size
         raw_info_hash = bencode(self.decoded_file['info'])
         self.info_hash = sha1(raw_info_hash).digest()
-        # my bittorrent client identifier
-        client_identifier = 'RA1000'
-        # random 18 bytes string
-        random_string = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
-        peer_id_not_decoded = f"-{client_identifier}-{random_string}"
-        self.peer_id = sha1(peer_id_not_decoded.encode('utf-8')).digest()
+        self.peer_id = generate_client_id()
         self.port = 6881
         self.announce_list = self.__get_trackers()
 

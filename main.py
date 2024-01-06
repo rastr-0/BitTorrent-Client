@@ -13,7 +13,6 @@ if __name__ == '__main__':
 
     # set utilities variables
     utilities.INFO_HASH = torrent_object.info_hash
-    utilities.PEER_ID = torrent_object.peer_id
 
     # decode the response
     response = torrent_object.request_to_tracker()
@@ -27,3 +26,5 @@ if __name__ == '__main__':
     manager.connect_to_peers(peers_list)
 
     manager.initiate_handshake()
+    manager.receive_handshake()
+

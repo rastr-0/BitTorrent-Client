@@ -20,8 +20,8 @@ class HandShake(Message):
     def __init__(self, info_hash, peer_id):
         super(HandShake, self).__init__()
 
-        self.peer_id = info_hash
-        self.info_hash = peer_id
+        self.peer_id = peer_id
+        self.info_hash = info_hash
 
         assert len(self.info_hash) == 20
         assert len(self.peer_id) < 255

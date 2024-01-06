@@ -2,8 +2,9 @@ import errno
 
 from peer import Peer
 from message import HandShake
-from utilities import INFO_HASH, PEER_ID
+from utilities import INFO_HASH, generate_client_id
 import socket
+import select
 
 
 class PeerManager:
@@ -25,7 +26,7 @@ class PeerManager:
         if peer.socket is None:
             return False
         try:
-            handshake = HandShake(info_hash=INFO_HASH, peer_id=PEER_ID).to_bytes()
+            handshake = HandShake(info_hash=INFO_HASH, peer_id=generate_client_id()).to_bytes()
             peer.send_message(msg=handshake)
             print(f"HandShake was sent to user with following ip: {peer.ip_address} and port: {peer.port}")
             # LOG.log(f"HandShake was sent to user with following ip: {peer.ip_address}")
@@ -48,21 +49,25 @@ class PeerManager:
         """Handle Handshake from the peers and change handshake_received state"""
         for connected_peer in self.connected_peers:
             if connected_peer.get_state("handshake_sent"):
-                # call response data handling function
-                self.process_buffer(connected_peer)
-                connected_peer.set_state("handshake_received")
+                if self.process_buffer(connected_peer):
+                    connected_peer.set_state("handshake_received")
 
     @staticmethod
     def __read_buffer(_socket):
         data = b""
         # parameter for socket.recv function should be small power of 2 -> 4096 (2^12)
         buffer_size = 4096
+        _socket.setblocking(False)
         while True:
             try:
-                buffer = _socket.recv(buffer_size)
-                if len(buffer) <= 0:
+                ready_to_read, _, _ = select.select([_socket], [], [], 1)
+                if ready_to_read:
+                    buffer = _socket.recv(buffer_size)
+                    if len(buffer) <= 0:
+                        break
+                    data += buffer
+                else:
                     break
-                data += buffer
             except socket.error as e:
                 # buffer is empty
                 if e.args[0] == errno.EAGAIN or e.args[0] == errno.EWOULDBLOCK:
@@ -81,7 +86,10 @@ class PeerManager:
         """Get peers socket, pass socket to _read_buffer handle data by types of messages"""
         peer_socket = connected_peer.socket
         response_message = self.__read_buffer(peer_socket)
-        # handle type of message
+        print(response_message)
+        if response_message:
+            return True
+        return False
 
     def determine_message_type(self, response_data):
         pass
