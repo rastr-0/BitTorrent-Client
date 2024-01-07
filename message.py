@@ -2,6 +2,10 @@ from utilities import HANDSHAKE_PSTR, LEN_HANDSHAKE_PSTR
 from struct import pack, unpack
 
 
+class WrongMessageType(Exception):
+    pass
+
+
 class Message:
     def to_bytes(self):
         raise NotImplementedError()
@@ -46,6 +50,174 @@ class HandShake(Message):
 
 
 class KeepAlive(Message):
-    """The structure of request: """
+    """The structure of request:
+        <len=0000>(4 bytes)"""
+    payload_length = 0
+    total_length = 4
+
     def __init__(self):
         super(KeepAlive, self).__init__()
+
+    def to_bytes(self):
+        return pack(">I", self.payload_length)
+
+    @classmethod
+    def from_bytes(cls, payload):
+        payload_length = unpack(">I", payload[:cls.total_length])
+
+        if payload_length != 0:
+            raise WrongMessageType("Not a KeepAlive message")
+
+        return KeepAlive()
+
+
+class Choke(Message):
+    """The structure of request:
+        <len=0001>(4 bytes)<id=0>(1 byte)"""
+    message_id = 0
+
+    payload_length = 1
+    total_length = 5
+
+    def __init__(self):
+        super(Choke, self).__init__()
+
+    def to_bytes(self):
+        return pack(">IB", self.payload_length, self.message_id)
+
+    @classmethod
+    def from_bytes(cls, payload):
+        payload_length, message_id = unpack(">IB", payload[:cls.total_length])
+        if message_id != cls.message_id:
+            raise WrongMessageType("Not a Choke message")
+
+        return Choke()
+
+
+class Unchoke(Message):
+    """The structure of request:
+            <len=0001>(4 bytes)<id=1>(1 byte)"""
+    message_id = 1
+
+    payload_length = 1
+    total_length = 5
+
+    def __init__(self):
+        super(Unchoke, self).__init__()
+
+    def to_bytes(self):
+        return pack(">IB", self.payload_length, self.message_id)
+
+    @classmethod
+    def from_bytes(cls, payload):
+        payload_length, message_id = unpack(">IB", payload[:cls.total_length])
+        if message_id != cls.message_id:
+            raise WrongMessageType("Not an Unchoke message")
+
+        return Unchoke()
+
+
+class Interested(Message):
+    """The structure of request:
+        interested: <len=0001>(4 bytes)<id=2>(1 byte)"""
+    message_id = 2
+
+    payload_length = 1
+    total_length = 5
+
+    def __init__(self):
+        super(Interested, self).__init__()
+
+    def to_bytes(self):
+        return pack(">IB", self.payload_length, self.message_id)
+
+    @classmethod
+    def from_bytes(cls, payload):
+        payload_length, message_id = unpack(">IB", payload[:cls.total_length])
+        if message_id != cls.message_id:
+            raise WrongMessageType("Not an Interested message")
+
+        return Interested()
+
+
+class NotInterested(Message):
+    """The structure of request:
+        interested: <len=0001>(4 bytes)<id=3>(1 byte)"""
+    message_id = 3
+
+    payload_length = 1
+    total_length = 5
+
+    def __init__(self):
+        super(NotInterested, self).__init__()
+
+    def to_bytes(self):
+        return pack(">IB", self.payload_length, self.message_id)
+
+    @classmethod
+    def from_bytes(cls, payload):
+        payload_length, message_id = unpack(">IB", payload[:cls.total_length])
+        if message_id != cls.message_id:
+            raise WrongMessageType("Not an Interested message")
+
+        return NotInterested()
+
+
+class Have(Message):
+    """The structure of request:
+        <len=0005>(4 bytes)<id=4>(1 byte)<piece index>"(4 bytes)"""
+    message_id = 4
+
+    payload_length = 5
+    total_length = 9
+
+    def __init__(self, piece_index):
+        super(Have, self).__init__()
+        self.piece_index = piece_index
+
+    def to_bytes(self):
+        return pack(">IBI", self.payload_length, self.message_id, self.piece_index)
+
+    @classmethod
+    def from_bytes(cls, payload):
+        payload_length, message_id, piece_index = unpack(">IBI", payload[:cls.total_length])
+        if message_id != cls.message_id:
+            raise WrongMessageType("Not a Have message")
+
+        return Have(piece_index)
+
+
+class BitField(Message):
+    """The structure of request:
+        <len=0001+X>(4 bytes)<id=5>(1 byte)<bitfield>(x bytes)"""
+    message_id = 5
+
+    def __init__(self, bitfield):
+        super(BitField, self).__init__()
+        self.bitfield = bitfield
+        self.bitfield_bytes = self.bitfield.to_bytes()
+        self.bitfield_length = len(self.bitfield_bytes)
+
+        self.payload_length = 1 + self.bitfield_length
+        self.total_length = 4 + self.payload_length
+
+    def to_bytes(self):
+        return pack(">IB{}s".format(self.bitfield_length),
+                    self.payload_length,
+                    self.message_id,
+                    self.bitfield_bytes)
+
+    @classmethod
+    def from_bytes(cls, payload):
+        from bitstring import BitArray
+
+        payload_length, message_id = unpack(">IB", payload[:5])
+        bitfield_length = payload_length - 1
+
+        if message_id != cls.message_id:
+            raise WrongMessageType("Not a BitField message")
+
+        raw_bitfield = unpack(">{}s".format(bitfield_length), payload[5:5 + bitfield_length])
+        bitfield_bytes = BitArray(bytes=bytes(raw_bitfield))
+
+        return BitField(bitfield_bytes)

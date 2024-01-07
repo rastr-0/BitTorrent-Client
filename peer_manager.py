@@ -21,21 +21,6 @@ class PeerManager:
         for connected_peer in self.connected_peers:
             print(f"ip: {connected_peer.ip_address}  port: {connected_peer.port}")
 
-    @staticmethod
-    def __handshake(peer):
-        if peer.socket is None:
-            return False
-        try:
-            handshake = HandShake(info_hash=INFO_HASH, peer_id=generate_client_id()).to_bytes()
-            peer.send_message(msg=handshake)
-            print(f"HandShake was sent to user with following ip: {peer.ip_address} and port: {peer.port}")
-            # LOG.log(f"HandShake was sent to user with following ip: {peer.ip_address}")
-            return True
-        except ConnectionError:
-            print(f"HandShake was not sent to user with following ip: {peer.ip_address} and port: {peer.port}")
-            # LOG.exception(f"HandShake was not sent to user with following ip: {peer.ip_address}")
-        return False
-
     def initiate_handshake(self):
         """Send Handshake to peers and change handshake_sent state"""
         for connected_peer in self.connected_peers:
@@ -51,6 +36,25 @@ class PeerManager:
             if connected_peer.get_state("handshake_sent"):
                 if self.process_buffer(connected_peer):
                     connected_peer.set_state("handshake_received")
+
+    def handle_incoming_messages(self):
+        while True:
+            pass
+
+    @staticmethod
+    def __handshake(peer):
+        if peer.socket is None:
+            return False
+        try:
+            handshake = HandShake(info_hash=INFO_HASH, peer_id=generate_client_id()).to_bytes()
+            peer.send_message(msg=handshake)
+            print(f"HandShake was sent to user with following ip: {peer.ip_address} and port: {peer.port}")
+            # LOG.log(f"HandShake was sent to user with following ip: {peer.ip_address}")
+            return True
+        except ConnectionError:
+            print(f"HandShake was not sent to user with following ip: {peer.ip_address} and port: {peer.port}")
+            # LOG.exception(f"HandShake was not sent to user with following ip: {peer.ip_address}")
+        return False
 
     @staticmethod
     def __read_buffer(_socket):
@@ -94,6 +98,4 @@ class PeerManager:
     def determine_message_type(self, response_data):
         pass
 
-    def send_messages_to_peers(self, peers_list: list) -> None:
-        """Stands for sending messages to peers"""
-        pass
+

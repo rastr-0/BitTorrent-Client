@@ -17,8 +17,8 @@ class Peer:
         self.initial_communication_states = {
             "handshake_sent": False,
             "handshake_received": False,
+            "bitfield_sent": False,
             "interested_sent": False,
-            "bitfield_received": False,
         }
         self.buffer = b""
         # self.number_of_pieces = number_of_pieces
@@ -67,6 +67,3 @@ class Peer:
             print(f"OS error: {oe}")
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
-
-    def handle_handshake(self):
-        pass
