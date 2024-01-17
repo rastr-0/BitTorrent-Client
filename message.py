@@ -2,8 +2,45 @@ from utilities import HANDSHAKE_PSTR, LEN_HANDSHAKE_PSTR
 from struct import pack, unpack
 
 
+class NotImplementedMessageError(Exception):
+    pass
+
+
 class WrongMessageType(Exception):
     pass
+
+
+class WrongMessageException(Exception):
+    pass
+
+
+class MessageDispatcher:
+    def __init__(self, payload_param):
+        self.payload = payload_param
+
+    def dispatch(self):
+        try:
+            payload_length, message_id, = unpack(">IB", self.payload[:5])
+        except Exception:
+            raise NotImplementedMessageError("Error occur while unpacking buffer")
+
+        messages_ids = {
+            0: Choke,
+            1: Unchoke,
+            2: Interested,
+            3: NotInterested,
+            4: Have,
+            5: None,  # Bitfield
+            6: None,  # Request
+            7: None,  # Piece
+            8: None,  # Cancel
+            9: None,  # Port
+        }
+
+        if message_id not in messages_ids:
+            raise WrongMessageType(f"Message with following id: {message_id} doesn't exist")
+
+        return messages_ids[message_id].from_bytes(self.payload)
 
 
 class Message:

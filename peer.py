@@ -5,6 +5,7 @@ from utilities import INFO_HASH, generate_client_id
 import select
 import errno
 import logging
+from struct import unpack
 
 
 class Peer:
@@ -131,5 +132,43 @@ class Peer:
         interested_msg = message.Interested().to_bytes()
         self.send_message(interested_msg)
 
-    def process_buffer(self):
+    def send_choke(self):
+        choke_msg = message.Choke().to_bytes()
+        self.send_message(choke_msg)
+
+    def send_unchoke(self):
+        unchoke_msg = message.Unchoke().to_bytes()
+        self.send_message(unchoke_msg)
+
+    def get_message(self):
+        """Determine message type and return it"""
+        while self.buffer > 4:
+            payload_length, = unpack(">I", self.buffer[:4])
+            total_length = payload_length + 4
+            if self.buffer < total_length:
+                break
+            else:
+                payload = self.buffer[:total_length]
+                self.buffer = self.buffer[total_length:]
+            try:
+                msg = message.MessageDispatcher(payload_param=payload).dispatch()
+                if msg:
+                    yield msg
+            except message.WrongMessageException as e:
+                logging.error(e.__str__())
+
+    def handle_choke(self, msg: message.Choke):
+        """Handles message with type Choke"""
+        pass
+
+    def handle_unchoke(self, msg: message.Unchoke):
+        pass
+
+    def handle_interested(self, msg: message.Interested):
+        pass
+
+    def handle_not_interested(self, msg: message.NotInterested):
+        pass
+
+    def handle_have(self, msg: message.Have):
         pass

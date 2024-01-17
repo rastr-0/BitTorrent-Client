@@ -10,7 +10,7 @@ class PeerManager:
         self.lock = threading.Lock()
 
     def connect_to_peers(self, peers_list: list) -> None:
-        """Establish TCP connection with peers"""
+        """Establish TCP connection and do handshakes with peers"""
         print("The process of establishing connections and doing a handshakes started...")
         for peer in peers_list:
             peer_obj = Peer(peer['ip'], peer['port'])
@@ -23,7 +23,23 @@ class PeerManager:
         for connected_peer in self.connected_peers:
             print(f"ip: {connected_peer.ip_address}  port: {connected_peer.port}")
 
-    def __add_peer(self, peer):
+    def run(self):
+        while True:
+            pass
+
+    def __process_message(self, new_msg: message.Message, peer: Peer):
+        if isinstance(new_msg, message.Choke):
+            peer.handle_choke(new_msg)
+        elif isinstance(new_msg, message.Unchoke):
+            peer.handle_unchoke(new_msg)
+        elif isinstance(new_msg, message.Interested):
+            peer.handle_interested(new_msg)
+        elif isinstance(new_msg, message.NotInterested):
+            peer.handle_not_interested(new_msg)
+        elif isinstance(new_msg, message.Have):
+            peer.handle_have(new_msg)
+
+    def __add_peer(self, peer: Peer):
         with self.lock:
             self.connected_peers.append(peer)
 
