@@ -23,8 +23,6 @@ if __name__ == '__main__':
 
     # create PeerManager object
     manager = PeerManager()
+    # connect to peers and exchange handshakes with peers
     manager.connect_to_peers(peers_list)
-
-    manager.initiate_handshake()
-    manager.receive_handshake()
 
