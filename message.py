@@ -15,6 +15,8 @@ class WrongMessageException(Exception):
 
 
 class MessageDispatcher:
+    """Message dispatcher class which determines
+        the type of message based on the payload"""
     def __init__(self, payload_param):
         self.payload = payload_param
 
@@ -44,6 +46,7 @@ class MessageDispatcher:
 
 
 class Message:
+    """Base class"""
     def to_bytes(self):
         raise NotImplementedError()
 
@@ -133,7 +136,7 @@ class Choke(Message):
 
 class Unchoke(Message):
     """The structure of request:
-            <len=0001>(4 bytes)<id=1>(1 byte)"""
+        <len=0001>(4 bytes)<id=1>(1 byte)"""
     message_id = 1
 
     payload_length = 1

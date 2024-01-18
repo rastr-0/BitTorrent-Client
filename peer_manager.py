@@ -1,6 +1,10 @@
+import logging
+import select
+
 from peer import Peer
 import message
 import threading
+import errno
 
 
 class PeerManager:
@@ -23,28 +27,79 @@ class PeerManager:
         for connected_peer in self.connected_peers:
             print(f"ip: {connected_peer.ip_address}  port: {connected_peer.port}")
 
-    def run(self):
+    @staticmethod
+    def __read_buffer_from_socket(socket):
+        """Get data from the socket and return them in a byte-string format"""
+        data = b''
         while True:
-            pass
+            try:
+                buffer = socket.recv(4096)
+                if len(buffer) <= 0:
+                    break
+                data += buffer
+            except socket.error as e:
+                # buffer is empty
+                if e.args[0] == errno.EAGAIN or e.args[0] == errno.EWOULDBLOCK:
+                    pass
+                else:
+                    print(f"Socket-related error occur: ({e.args[0]}) while reading "
+                          f"a buffer for the following socket: {socket}")
+            except BufferError:
+                logging.exception(f"Error occur while reading a buffer for following socket: {socket}")
 
-    def __process_message(self, new_msg: message.Message, peer: Peer):
+        return data
+
+    def run(self):
+        """High-level message handling function
+        1 - Get ready for reading sockets of the connected peers
+        2 - Get peers based on the sockets
+        3 - Get payload of the incoming message by reading buffer from socket
+        4 - Add payload data to the peers buffers
+        """
+        while True:
+            payload = b""
+            read = [peer.socket for peer in self.connected_peers]
+            read_sockets, _, _ = select.select(read, [], [])
+
+            for socket in read_sockets:
+                peer = self.get_peer_by_socket(socket)
+
+                try:
+                    payload = self.__read_buffer_from_socket(socket)
+                except Exception:
+                    logging.error("Error occur while reading socket")
+
+                peer.buffer += payload
+
+                for peer_message in peer.get_message():
+                    self.__process_message(peer_message, peer)
+
+    @staticmethod
+    def __process_message(new_msg: message.Message, peer: Peer):
+        """Based on the message type is called handling function"""
         if isinstance(new_msg, message.Choke):
-            peer.handle_choke(new_msg)
+            peer.handle_choke()
         elif isinstance(new_msg, message.Unchoke):
-            peer.handle_unchoke(new_msg)
+            peer.handle_unchoke()
         elif isinstance(new_msg, message.Interested):
-            peer.handle_interested(new_msg)
+            peer.handle_interested()
         elif isinstance(new_msg, message.NotInterested):
-            peer.handle_not_interested(new_msg)
+            peer.handle_not_interested()
         elif isinstance(new_msg, message.Have):
             peer.handle_have(new_msg)
 
     def __add_peer(self, peer: Peer):
         with self.lock:
             self.connected_peers.append(peer)
+            peer.healthy = True
 
     def send_keep_alive(self):
         for connected_peer in self.connected_peers:
             connected_peer.send_keep_alive()
 
+    def get_peer_by_socket(self, socket):
+        for peer in self.connected_peers:
+            if socket == peer.socket:
+                return peer
 
+        raise Exception("Peer has not been found")

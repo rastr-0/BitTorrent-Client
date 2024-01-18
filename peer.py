@@ -1,5 +1,8 @@
 import socket
 from time import time
+
+import bitstring
+
 import message
 from utilities import INFO_HASH, generate_client_id
 import select
@@ -12,7 +15,9 @@ class Peer:
     def __init__(self, ip, port=6881):
         self.states = {
             'peer_choking': True,
-            'peer_interested': False
+            'peer_interested': False,
+            'am_choking': True,
+            'am_interested': False
         }
         self.ip_address = ip
         self.port = port
@@ -157,18 +162,39 @@ class Peer:
             except message.WrongMessageException as e:
                 logging.error(e.__str__())
 
-    def handle_choke(self, msg: message.Choke):
-        """Handles message with type Choke"""
-        pass
+    def am_choking(self):
+        return self.states['am_choking']
 
-    def handle_unchoke(self, msg: message.Unchoke):
-        pass
+    def am_unchoking(self):
+        return not self.states['am_choking']
 
-    def handle_interested(self, msg: message.Interested):
-        pass
+    def is_choking(self):
+        return self.states['peer_choking']
 
-    def handle_not_interested(self, msg: message.NotInterested):
-        pass
+    def is_unchoking(self):
+        return not self.states['peer_choking']
+
+    def is_interested(self):
+        return self.states['peer_interested']
+
+    def am_interested(self):
+        return self.states['am_interested']
+
+    def handle_choke(self):
+        self.states['peer_choking'] = True
+
+    def handle_unchoke(self):
+        self.states['peer_choking'] = False
+
+    def handle_interested(self):
+        self.states['peer_interested'] = True
+
+        if self.am_choking():
+            unchoke = message.Unchoke().to_bytes()
+            self.send_message(unchoke)
+
+    def handle_not_interested(self):
+        self.states['peer_interested'] = False
 
     def handle_have(self, msg: message.Have):
         pass
