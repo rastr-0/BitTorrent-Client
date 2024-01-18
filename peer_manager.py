@@ -12,6 +12,7 @@ class PeerManager:
         self.connected_peers = []
         self.message = None
         self.lock = threading.Lock()
+        self.active = True
 
     def connect_to_peers(self, peers_list: list) -> None:
         """Establish TCP connection and do handshakes with peers"""
@@ -30,10 +31,15 @@ class PeerManager:
     @staticmethod
     def __read_buffer_from_socket(socket):
         """Get data from the socket and return them in a byte-string format"""
+        buffer_size = 4096  # 2^12
         data = b''
+        socket.setblocking(False)
         while True:
             try:
-                buffer = socket.recv(4096)
+                ready_to_read, _, _ = select.select([socket], [], [], 1)
+                buffer = b''
+                if ready_to_read:
+                    buffer = socket.recv(buffer_size)
                 if len(buffer) <= 0:
                     break
                 data += buffer
@@ -50,13 +56,13 @@ class PeerManager:
         return data
 
     def run(self):
-        """High-level message handling function
+        """High-level messages handling function
         1 - Get ready for reading sockets of the connected peers
         2 - Get peers based on the sockets
         3 - Get payload of the incoming message by reading buffer from socket
         4 - Add payload data to the peers buffers
         """
-        while True:
+        while self.active:
             payload = b""
             read = [peer.socket for peer in self.connected_peers]
             read_sockets, _, _ = select.select(read, [], [])
@@ -67,7 +73,8 @@ class PeerManager:
                 try:
                     payload = self.__read_buffer_from_socket(socket)
                 except Exception:
-                    logging.error("Error occur while reading socket")
+                    logging.error(f"Error occur while reading socket "
+                                  f"for the peer with following ip: {peer.ip_address} and port: {peer.port}")
 
                 peer.buffer += payload
 
@@ -103,3 +110,11 @@ class PeerManager:
                 return peer
 
         raise Exception("Peer has not been found")
+
+    def test_send_interested(self):
+        for peer in self.connected_peers:
+            peer.send_interested()
+
+    def test_print_peers_buffer(self):
+        for peer in self.connected_peers:
+            print(peer.buffer)

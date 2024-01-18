@@ -26,3 +26,9 @@ if __name__ == '__main__':
     # connect to peers and exchange handshakes with peers
     manager.connect_to_peers(peers_list)
 
+    manager.test_send_interested()
+    # handling incoming messages from the connected peers
+    manager.run()
+
+    manager.test_print_peers_buffer()
+

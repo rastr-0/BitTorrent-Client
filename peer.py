@@ -147,10 +147,10 @@ class Peer:
 
     def get_message(self):
         """Determine message type and return it"""
-        while self.buffer > 4:
+        while len(self.buffer) > 4:
             payload_length, = unpack(">I", self.buffer[:4])
             total_length = payload_length + 4
-            if self.buffer < total_length:
+            if len(self.buffer) < total_length:
                 break
             else:
                 payload = self.buffer[:total_length]
