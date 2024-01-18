@@ -27,8 +27,8 @@ class Peer:
         self.buffer = b""
         self.last_keep_alive_time = time()
 
-    @staticmethod
-    def __read_buffer(self):
+    def read_buffer(self):
+        data = b""
         # parameter for socket.recv function should be small power of 2 -> 4096 (2^12)
         buffer_size = 4096
         self.socket.setblocking(False)
@@ -36,10 +36,10 @@ class Peer:
             try:
                 ready_to_read, _, _ = select.select([self.socket], [], [], 1)
                 if ready_to_read:
-                    buffer = self.socket.recv(buffer_size)
-                    if len(buffer) <= 0:
+                    self.buffer = self.socket.recv(buffer_size)
+                    if len(self.buffer) <= 0:
                         break
-                    self.buffer += buffer
+                    data += self.buffer
                 else:
                     break
             except socket.error as e:
@@ -53,7 +53,9 @@ class Peer:
                 print(f"BufferError occur while reading a buffer "
                       f"for the following socket: {self.socket}")
 
-        return self.buffer
+        self.buffer = b""
+
+        return data
 
     @staticmethod
     def __is_handshake(msg):
@@ -116,7 +118,7 @@ class Peer:
             print(f"An unexpected error occurred: {e}")
 
     def process_handshake_response(self):
-        response_message = self.__read_buffer(self)
+        response_message = self.read_buffer()
         logging.info(response_message)
         return self.__is_handshake(response_message)
 
@@ -145,16 +147,19 @@ class Peer:
         unchoke_msg = message.Unchoke().to_bytes()
         self.send_message(unchoke_msg)
 
-    def get_message(self):
+    @staticmethod
+    def get_message(buffer):
         """Determine message type and return it"""
-        while len(self.buffer) > 4:
-            payload_length, = unpack(">I", self.buffer[:4])
+        while len(buffer) > 4:
+            print(buffer)
+            payload_length, = unpack(">I", buffer[:4])
             total_length = payload_length + 4
-            if len(self.buffer) < total_length:
+
+            if len(buffer) < total_length:
                 break
             else:
-                payload = self.buffer[:total_length]
-                self.buffer = self.buffer[total_length:]
+                payload = buffer[:total_length]
+                buffer = buffer[total_length:]
             try:
                 msg = message.MessageDispatcher(payload_param=payload).dispatch()
                 if msg:

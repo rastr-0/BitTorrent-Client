@@ -64,21 +64,14 @@ class PeerManager:
         """
         while self.active:
             payload = b""
-            read = [peer.socket for peer in self.connected_peers]
-            read_sockets, _, _ = select.select(read, [], [])
 
-            for socket in read_sockets:
-                peer = self.get_peer_by_socket(socket)
-
+            for peer in self.connected_peers:
                 try:
-                    payload = self.__read_buffer_from_socket(socket)
+                    payload = peer.read_buffer()
                 except Exception:
                     logging.error(f"Error occur while reading socket "
                                   f"for the peer with following ip: {peer.ip_address} and port: {peer.port}")
-
-                peer.buffer += payload
-
-                for peer_message in peer.get_message():
+                for peer_message in peer.get_message(payload):
                     self.__process_message(peer_message, peer)
 
     @staticmethod
@@ -114,6 +107,10 @@ class PeerManager:
     def test_send_interested(self):
         for peer in self.connected_peers:
             peer.send_interested()
+
+    def test_send_unchoke(self):
+        for peer in self.connected_peers:
+            peer.send_unchoke()
 
     def test_print_peers_buffer(self):
         for peer in self.connected_peers:
