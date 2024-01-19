@@ -21,8 +21,10 @@ class MessageDispatcher:
         self.payload = payload_param
 
     def dispatch(self):
+        message_id = -1
         try:
-            payload_length, message_id, = unpack(">IB", self.payload[:5])
+            if len(self.payload) >= 5:
+                payload_length, message_id, = unpack(">IB", self.payload[:5])
         except Exception:
             raise NotImplementedMessageError("Error occur while unpacking buffer")
 

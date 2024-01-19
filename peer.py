@@ -12,7 +12,7 @@ from struct import unpack
 
 
 class Peer:
-    def __init__(self, ip, port=6881):
+    def __init__(self, number_of_pieces, ip, port=6881):
         self.states = {
             'peer_choking': True,
             'peer_interested': False,
@@ -26,6 +26,8 @@ class Peer:
         self.healthy = False
         self.buffer = b""
         self.last_keep_alive_time = time()
+        self.bitfield_size = number_of_pieces
+        self.bitfield = bitstring.BitArray(self.bitfield_size)
 
     def read_buffer(self):
         data = b""
@@ -128,25 +130,6 @@ class Peer:
     def get_last_keep_alive_call(self):
         return time() - self.last_keep_alive_time
 
-    def send_keep_alive(self):
-        if self.socket is None:
-            return False
-        keep_alive_msg = message.KeepAlive().to_bytes()
-        self.send_message(msg=keep_alive_msg)
-        self.set_keep_alive_call()
-
-    def send_interested(self):
-        interested_msg = message.Interested().to_bytes()
-        self.send_message(interested_msg)
-
-    def send_choke(self):
-        choke_msg = message.Choke().to_bytes()
-        self.send_message(choke_msg)
-
-    def send_unchoke(self):
-        unchoke_msg = message.Unchoke().to_bytes()
-        self.send_message(unchoke_msg)
-
     @staticmethod
     def get_message(buffer):
         """Determine message type and return it"""
@@ -202,4 +185,17 @@ class Peer:
         self.states['peer_interested'] = False
 
     def handle_have(self, msg: message.Have):
-        pass
+        self.bitfield[msg.piece_index] = True
+
+        if self.is_choking() and not self.am_interested():
+            interested_msg = message.Interested().to_bytes()
+            self.send_message(interested_msg)
+            self.states['am_interested'] = True
+
+    def handle_bitfield(self, msg: message.BitField):
+        self.bitfield = msg.bitfield
+
+        if self.is_choking() and not self.am_interested():
+            interested_msg = message.Interested().to_bytes()
+            self.send_message(interested_msg)
+            self.states['am_interested'] = True

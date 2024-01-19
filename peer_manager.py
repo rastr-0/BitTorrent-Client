@@ -8,17 +8,18 @@ import errno
 
 
 class PeerManager:
-    def __init__(self):
+    def __init__(self, number_of_pieces=-1):
         self.connected_peers = []
         self.message = None
         self.lock = threading.Lock()
         self.active = True
+        self.number_of_pieces = number_of_pieces
 
     def connect_to_peers(self, peers_list: list) -> None:
         """Establish TCP connection and do handshakes with peers"""
         print("The process of establishing connections and doing a handshakes started...")
         for peer in peers_list:
-            peer_obj = Peer(peer['ip'], peer['port'])
+            peer_obj = Peer(self.number_of_pieces, peer['ip'], peer['port'])
             if peer_obj.connect():
                 handshake_sent = peer_obj.handshake()
                 handshake_received = peer_obj.process_handshake_response()
@@ -87,6 +88,8 @@ class PeerManager:
             peer.handle_not_interested()
         elif isinstance(new_msg, message.Have):
             peer.handle_have(new_msg)
+        elif isinstance(new_msg, message.BitField):
+            peer.handle_bitfield(new_msg)
 
     def __add_peer(self, peer: Peer):
         with self.lock:
@@ -94,8 +97,9 @@ class PeerManager:
             peer.healthy = True
 
     def send_keep_alive(self):
+        keep_alive_message = message.KeepAlive().to_bytes()
         for connected_peer in self.connected_peers:
-            connected_peer.send_keep_alive()
+            connected_peer.send_message(keep_alive_message)
 
     def get_peer_by_socket(self, socket):
         for peer in self.connected_peers:
@@ -105,12 +109,14 @@ class PeerManager:
         raise Exception("Peer has not been found")
 
     def test_send_interested(self):
+        interested_message = message.Interested().to_bytes()
         for peer in self.connected_peers:
-            peer.send_interested()
+            peer.send_message(interested_message)
 
     def test_send_unchoke(self):
+        unchoke_message = message.Unchoke().to_bytes()
         for peer in self.connected_peers:
-            peer.send_unchoke()
+            peer.send_message(unchoke_message)
 
     def test_print_peers_buffer(self):
         for peer in self.connected_peers:

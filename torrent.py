@@ -4,6 +4,7 @@ from bcoding import bencode, bdecode
 from hashlib import sha1
 import requests
 from utilities import generate_client_id
+import math
 
 
 class Torrent:
@@ -20,7 +21,7 @@ class Torrent:
         self.event = str()
         self.file_size: int = 0
         self.piece_length: int = 0
-        # self.number_of_pieces: int = 0
+        self.number_of_pieces: int = 0
 
     def load_file(self, file):
         with open(file, mode='rb') as binary_file:
@@ -38,6 +39,7 @@ class Torrent:
         self.peer_id = generate_client_id()
         self.port = 6881
         self.announce_list = self.__get_trackers()
+        self.number_of_pieces = math.ceil(self.file_size / self.piece_length)
 
         return self
 
@@ -65,3 +67,6 @@ class Torrent:
             return tracker_response.text
         else:
             return "Error occurs"
+
+    def get_pieces_amount(self):
+        return self.number_of_pieces
