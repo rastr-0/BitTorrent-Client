@@ -2,6 +2,7 @@ import logging
 from hashlib import sha1
 import random
 import string
+from torrent import Torrent
 
 
 def generate_client_id():
@@ -15,6 +16,11 @@ def generate_client_id():
     return peer_id
 
 
+def get_pieces_number(torrent_file: Torrent):
+    return torrent_file.number_of_pieces
+
+
+BLOCK_SIZE = 2 ** 14  # 16KB
 LOG = logging.getLogger('')
 INFO_HASH = None
 HANDSHAKE_PSTR = b"BitTorrent protocol"

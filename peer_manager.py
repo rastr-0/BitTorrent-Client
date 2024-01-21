@@ -117,7 +117,3 @@ class PeerManager:
         unchoke_message = message.Unchoke().to_bytes()
         for peer in self.connected_peers:
             peer.send_message(unchoke_message)
-
-    def test_print_peers_buffer(self):
-        for peer in self.connected_peers:
-            print(peer.buffer)
