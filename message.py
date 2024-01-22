@@ -34,9 +34,9 @@ class MessageDispatcher:
             2: Interested,
             3: NotInterested,
             4: Have,
-            5: None,  # Bitfield
-            6: None,  # Request
-            7: None,  # Piece
+            5: BitField,  # Bitfield
+            6: Request,  # Request
+            7: Piece,  # Piece
             8: None,  # Cancel
             9: None,  # Port
         }

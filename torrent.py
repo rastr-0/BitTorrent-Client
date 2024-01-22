@@ -20,6 +20,7 @@ class Torrent:
         self.left: int = 0
         self.event = str()
         self.file_size: int = 0
+        self.pieces_hash = str()
         self.piece_length: int = 0
         self.number_of_pieces: int = 0
 
@@ -29,6 +30,7 @@ class Torrent:
 
         self.decoded_file = content
         self.piece_length = self.decoded_file['info']['piece length']
+        self.pieces_hash = self.decoded_file['info']['pieces']
         self.file_size = self.decoded_file['info']['length']
         self.event = 'started'
         self.uploaded = 0

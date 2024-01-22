@@ -12,6 +12,7 @@ from struct import unpack
 
 
 class Peer:
+    # FIX: I don't like the way how I pass number_of_pieces, utilities.py has a function for this
     def __init__(self, number_of_pieces, ip, port=6881):
         self.states = {
             'peer_choking': True,
@@ -199,3 +200,10 @@ class Peer:
             interested_msg = message.Interested().to_bytes()
             self.send_message(interested_msg)
             self.states['am_interested'] = True
+
+    def handle_request(self, msg: message.Request):
+        if self.is_interested() and self.is_unchoking():
+            pass
+
+    def handle_piece(self, msg: message.Piece):
+        pass

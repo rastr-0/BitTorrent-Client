@@ -90,11 +90,30 @@ class PeerManager:
             peer.handle_have(new_msg)
         elif isinstance(new_msg, message.BitField):
             peer.handle_bitfield(new_msg)
+        elif isinstance(new_msg, message.Request):
+            peer.handle_request(new_msg)
+        elif isinstance(new_msg, message.Piece):
+            peer.handle_piece(new_msg)
 
     def __add_peer(self, peer: Peer):
         with self.lock:
             self.connected_peers.append(peer)
             peer.healthy = True
+
+    def unchoked_peers_count(self):
+        count = 0
+        for peer in self.connected_peers:
+            if peer.is_unchoking():
+                count += 1
+        return count
+
+    def disconnect_peer(self, peer):
+        if peer in self.connected_peers:
+            try:
+                peer.socket.close()
+            except ConnectionRefusedError or ConnectionError:
+                logging.log(f"Unable to establish connection with peer: {peer.ip_address} : {peer.port}")
+            self.connected_peers.remove(peer)
 
     def send_keep_alive(self):
         keep_alive_message = message.KeepAlive().to_bytes()

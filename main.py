@@ -3,7 +3,8 @@ from torrent import Torrent
 from bcoding import bdecode
 
 
-# TODO: implement logic of Piece and PieceManager classes
+# TODO: implement for the Piece first_random_piece and rarest_piece functions logic,
+#  Piece class is based on the Block class
 
 if __name__ == '__main__':
 

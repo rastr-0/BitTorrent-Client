@@ -1,5 +1,5 @@
 from enum import Enum
-from utilities import BLOCK_SIZE
+from utilities import BLOCK_SIZE  # block_size --> 16KB
 
 
 class State(Enum):
@@ -8,8 +8,8 @@ class State(Enum):
     FULL = 2
 
 
-class Block(State):
-    def __init__(self, state: State = State.FREE, block_size: int = BLOCK_SIZE, data: bytes = b''):
-        self.state: State = state
+class Block:
+    def __init__(self, state=State.FREE, block_size=BLOCK_SIZE, data=b''):
+        self.state = state
         self.block_size = block_size
         self.data = data
