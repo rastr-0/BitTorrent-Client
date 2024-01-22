@@ -201,6 +201,8 @@ class Peer:
             self.send_message(interested_msg)
             self.states['am_interested'] = True
 
+    # create and call handling function for handle_piece and handle_request
+    # IDEA: possible implementation with pubsub.pub
     def handle_request(self, msg: message.Request):
         if self.is_interested() and self.is_unchoking():
             pass

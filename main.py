@@ -3,8 +3,9 @@ from torrent import Torrent
 from bcoding import bdecode
 
 
-# TODO: implement for the Piece first_random_piece and rarest_piece functions logic,
-#  Piece class is based on the Block class
+# DONE: Implemented basic logic for Piece and PieceManager classes
+#       Added 2 new classes in message.py -> Request and Piece
+# TODO: Implement logic for handling request and piece messages
 
 if __name__ == '__main__':
 
