@@ -263,3 +263,65 @@ class BitField(Message):
         bitfield_bytes = BitArray(bytes=bytes(raw_bitfield))
 
         return BitField(bitfield_bytes)
+
+
+class Request(Message):
+    """The structure of request:
+        request: <len=13>(4 bytes)<id=6>(1 byte)
+                <index>(4 bytes)<begin>(4 bytes)<length>(4 bytes)"""
+    message_id = 6
+    payload_length = 13
+    total_length = 4 + payload_length
+
+    def __init__(self, piece_index, block_offset, block_length):
+        super(Request, self).__init__()
+        self.piece_index = piece_index
+        self.block_offset = block_offset
+        self.block_length = block_length
+
+    def to_bytes(self):
+        return pack(">IBIII", self.payload_length,
+                    self.message_id, self.block_offset,
+                    self.block_length)
+
+    @classmethod
+    def from_bytes(cls, payload):
+        _, message_id, piece_index, block_offset, block_length = unpack(">IBIII", payload[:cls.total_length])
+        if message_id != cls.message_id:
+            raise WrongMessageType("Not a request message")
+
+        return Request(piece_index, block_offset, block_length)
+
+
+class Piece(Message):
+    """The structure of the requesst:
+        piece: <len=0009+X>(4 bytes)<id=7>(1 byte)<index>(4 bytes)<begin>(4 bytes)
+                <block>(block_length bytes)"""
+    message_id = 7
+    payload_length = 9  # +block_length
+    total_length = 4 + payload_length
+
+    def __init__(self, block_length, piece_index, block_offset, block):
+        super(Piece, self).__init__()
+
+        self.block_length = block_length
+        self.piece_index = piece_index
+        self.block_offset = block_offset
+        self.block = block
+
+        self.payload_length += block_length
+        self.total_length += self.payload_length
+
+    def to_bytes(self):
+        return pack(">IBII{}s", self.payload_length, self.message_id,
+                    self.piece_index, self.block_offset, self.block)
+
+    @classmethod
+    def from_bytes(cls, payload):
+        block_length = len(payload) - 13
+        _, message_id, piece_index, block_offset, block = unpack(">IBII{}s", payload[:cls.total_length])
+
+        if message_id != cls.message_id:
+            raise WrongMessageType("Not a piece message")
+
+        return Piece(block_length, piece_index, block_offset, block)
