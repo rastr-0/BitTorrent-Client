@@ -1,7 +1,10 @@
+import logging
+
 from block import Block, State
 from math import ceil
 from utilities import BLOCK_SIZE
 from hashlib import sha1
+import os
 
 
 class Piece:
@@ -44,11 +47,25 @@ class Piece:
             self.blocks[index].state = State.FULL
 
     def write_piece(self):
+        # merge blocks to one piece
         data = self._merge_blocks()
+        # check piece hash with original hash of the piece
         if not self._is_piece_valid(data):
             self._init_blocks()
             return False
-        # write piece to the file
+        # NOT the best way for saving pieces. Must be reorganized!
+        # create new dir (if doesn't exist) for pieces
+        try:
+            os.mkdir("downloaded_pieces")
+        except Exception:
+            logging.log(logging.INFO, "Directory exists")
+        try:
+            file_name = f"{sha1(data).digest()}_file"
+            f = open(file_name, "wb")
+            f.write(data)
+            f.close()
+        except FileExistsError:
+            logging.log(logging.ERROR, "File for the piece already exists")
 
     def _is_piece_valid(self, data):
         """Compare merged blocks hash and original hash of the piece from tracker"""
