@@ -8,7 +8,9 @@ import errno
 
 
 class PeerManager:
-    def __init__(self, number_of_pieces=-1):
+    def __init__(self, piece_manager, number_of_pieces=-1):
+        self.piece_manager = piece_manager
+
         self.connected_peers = []
         self.message = None
         self.lock = threading.Lock()
@@ -19,7 +21,7 @@ class PeerManager:
         """Establish TCP connection and do handshakes with peers"""
         print("The process of establishing connections and doing a handshakes started...")
         for peer in peers_list:
-            peer_obj = Peer(self.number_of_pieces, peer['ip'], peer['port'])
+            peer_obj = Peer(self.piece_manager, self.number_of_pieces, peer['ip'], peer['port'])
             if peer_obj.connect():
                 handshake_sent = peer_obj.handshake()
                 handshake_received = peer_obj.process_handshake_response()
@@ -112,7 +114,7 @@ class PeerManager:
             try:
                 peer.socket.close()
             except ConnectionRefusedError or ConnectionError:
-                logging.log(f"Unable to establish connection with peer: {peer.ip_address} : {peer.port}")
+                logging.log(logging.ERROR, "Unable to establish connection with peer: {peer.ip_address} : {peer.port}")
             self.connected_peers.remove(peer)
 
     def send_keep_alive(self):
