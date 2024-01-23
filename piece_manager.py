@@ -40,3 +40,9 @@ class PieceManager:
                     break
 
         return None
+
+    def all_pieces_completed(self):
+        for piece in self.pieces:
+            if not piece.is_full:
+                return False
+        return True
