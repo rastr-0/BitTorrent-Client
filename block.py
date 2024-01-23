@@ -4,7 +4,7 @@ from utilities import BLOCK_SIZE  # block_size --> 16KB
 
 class State(Enum):
     FREE = 0
-    PENDING = 1
+    PENDING = 1  # number of pieces pending at a time is 5-7
     FULL = 2
 
 

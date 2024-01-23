@@ -96,6 +96,10 @@ class PeerManager:
             peer.handle_request(new_msg)
         elif isinstance(new_msg, message.Piece):
             peer.handle_piece(new_msg)
+        elif isinstance(new_msg, message.Cancel):
+            peer.handle_cancel(new_msg)
+        elif isinstance(new_msg, message.Port):
+            peer.handle_port(new_msg)
 
     def __add_peer(self, peer: Peer):
         with self.lock:

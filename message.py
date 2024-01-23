@@ -1,7 +1,6 @@
 from utilities import HANDSHAKE_PSTR, LEN_HANDSHAKE_PSTR
 from struct import pack, unpack
 
-# TODO: add Port and Cancel classes
 
 class NotImplementedMessageError(Exception):
     pass
