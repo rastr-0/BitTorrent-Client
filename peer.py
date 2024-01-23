@@ -1,10 +1,9 @@
-import socket
-from time import time
-
-import bitstring
-
 import message
 from utilities import INFO_HASH, generate_client_id
+
+import socket
+from time import time
+import bitstring
 import select
 import errno
 import logging
@@ -13,7 +12,9 @@ from struct import unpack
 
 class Peer:
     # FIX: I don't like the way how I pass number_of_pieces, utilities.py has a function for this
-    def __init__(self, number_of_pieces, ip, port=6881):
+    def __init__(self, piece_manager, number_of_pieces, ip, port=6881):
+        self.piece_manager = piece_manager
+
         self.states = {
             'peer_choking': True,
             'peer_interested': False,
@@ -201,11 +202,27 @@ class Peer:
             self.send_message(interested_msg)
             self.states['am_interested'] = True
 
-    # create and call handling function for handle_piece and handle_request
-    # IDEA: possible implementation with pubsub.pub
     def handle_request(self, msg: message.Request):
         if self.is_interested() and self.is_unchoking():
-            pass
+            piece_index, block_offset, block_length = msg.piece_index, msg.block_offset, msg.block_length
+            block = self.piece_manager.get_block(piece_index, block_offset, block_length)
+            if block:
+                piece = message.Piece(piece_index, block_offset, block_length, block).to_bytes()
+                self.send_message(piece)
+                logging.info(f"Sent piece index {msg.piece_index} to peer: {self.ip_address}")
 
     def handle_piece(self, msg: message.Piece):
-        pass
+        piece_index, block_offset, block = msg.piece_index, msg.block_offset, msg.block
+
+        # handle case if block is already full
+        if self.piece_manager.pieces[piece_index].is_full():
+            return
+
+        self.piece_manager.pieces[piece_index].set_block(block_offset, block)
+
+        # handle case if all blocks in one piece are full
+        if self.piece_manager.pieces[piece_index].are_blocks_full():
+            # more conditions for checking:
+            # if piece is valid: try to encrypt with hash1 and compare with initial hash of the block
+            if self.piece_manager.pieces[piece_index].write_piece():
+                self.piece_manager.completed_pieces += 1
