@@ -1,5 +1,6 @@
 import message
 from utilities import INFO_HASH, generate_client_id
+from block import State
 
 import socket
 from time import time
@@ -214,15 +215,32 @@ class Peer:
     def handle_piece(self, msg: message.Piece):
         piece_index, block_offset, block = msg.piece_index, msg.block_offset, msg.block
 
-        # handle case if block is already full
+        # handle case if piece is already downloaded
         if self.piece_manager.pieces[piece_index].is_full():
             return
 
         self.piece_manager.pieces[piece_index].set_block(block_offset, block)
 
         # handle case if all blocks in one piece are full
-        if self.piece_manager.pieces[piece_index].are_blocks_full():
+        if not self.piece_manager.pieces[piece_index].are_blocks_full():
             # more conditions for checking:
             # if piece is valid: try to encrypt with hash1 and compare with initial hash of the block
             if self.piece_manager.pieces[piece_index].write_piece():
                 self.piece_manager.completed_pieces += 1
+
+    def handle_cancel(self, msg: message.Cancel):
+        piece_index = msg.piece_index
+        piece = self.piece_manager.pieces[piece_index]
+        # it's possible to cancel only pieces that are in PENDING status (currently downloading)
+        # if piece is in FREE or FULL status -> do nothing
+        if piece.state == State.PENDING:
+            piece.state = State.FREE
+            if piece.blocks is not []:
+                piece.blocks = []
+                logging.log(logging.INFO, f"Requesting was canceled for piece_hash: {piece.piece_hash}")
+
+    def handle_port(self, msg: message.Port):
+        port = msg.port
+        if port:
+            self.port = port
+        logging.log(logging.INFO, "Port information was updated for peer: {self.ip_address}")
