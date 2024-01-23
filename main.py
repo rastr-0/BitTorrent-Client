@@ -4,9 +4,7 @@ from bcoding import bdecode
 from piece_manager import PieceManager
 
 
-# DONE: Implemented basic logic for Piece and PieceManager classes
-#       Added 2 new classes in message.py -> Request and Piece
-# TODO: Implement logic for handling request and piece messages
+# TODO: finish write_piece function, debug new added functionality
 
 if __name__ == '__main__':
 
