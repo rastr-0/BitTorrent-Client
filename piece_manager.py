@@ -10,7 +10,7 @@ class PieceManager:
         self.piece_length = get_piece_length(torrent_object)
         self.total_pieces_length = get_torrent_total_length(torrent_object)
 
-        self.complete_pieces = 0
+        self.completed_pieces = 0
         self.bitfield = bitstring.BitArray(self.pieces_number)
         self.pieces = self._init_pieces()
 
@@ -30,3 +30,13 @@ class PieceManager:
         pieces.append(Piece(self.pieces_number-1, last_piece_length, self.pieces_hash[start_index:end_index]))
 
         return pieces
+
+    def get_block(self, piece_index, block_offset, block_length):
+        for piece in self.pieces:
+            if piece_index == piece.piece_index:
+                if piece.is_full:
+                    return piece.get_block(block_offset, block_length)
+                else:
+                    break
+
+        return None
