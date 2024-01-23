@@ -1,6 +1,7 @@
 from utilities import HANDSHAKE_PSTR, LEN_HANDSHAKE_PSTR
 from struct import pack, unpack
 
+# TODO: add Port and Cancel classes
 
 class NotImplementedMessageError(Exception):
     pass
@@ -281,7 +282,7 @@ class Request(Message):
 
     def to_bytes(self):
         return pack(">IBIII", self.payload_length,
-                    self.message_id, self.block_offset,
+                    self.message_id, self.piece_index, self.block_offset,
                     self.block_length)
 
     @classmethod
@@ -325,3 +326,55 @@ class Piece(Message):
             raise WrongMessageType("Not a piece message")
 
         return Piece(block_length, piece_index, block_offset, block)
+
+
+class Cancel(Message):
+    """The structure of the reqeust:
+        <len=0013>(4 bytes)<id=8>(1 byte)<index>(4 bytes)<begin>(4 bytes)<length>(4 bytes)"""
+    message_id = 8
+    payload_length = 12
+    total_length = 5 + payload_length
+
+    def __init__(self, piece_index, block_offset, block_length):
+        super(Cancel, self).__init__()
+
+        self.piece_index = piece_index
+        self.block_offset = block_offset
+        self.block_length = block_length
+
+    def to_bytes(self):
+        return pack(">IBIII", self.message_id, self.payload_length,
+                    self.piece_index, self.block_offset, self.block_length)
+
+    @classmethod
+    def from_bytes(cls, payload):
+        _, message_id, piece_index, block_offset, block_length = unpack(">IBIII", cls[:cls.total_length])
+        if message_id != cls.message_id:
+            raise WrongMessageType("Not a cancel message")
+
+        return Cancel(piece_index, block_offset, block_length)
+
+
+class Port(Message):
+    """The structure of the request:
+        <len=0003>(4 bytes)<id=9>(1 byte)<listen-port>(4 bytes)"""
+    message_id = 9
+    payload_length = 4
+    total_length = 5 + payload_length
+
+    def __init__(self, port):
+        super(Port, self).__init__()
+        self.port = port
+
+    def to_bytes(self):
+        return pack(">IBI", self.payload_length, self.message_id, self.port)
+
+    @classmethod
+    def from_bytes(cls, payload):
+        _, message_id, port = unpack(">IBI", payload[:cls.total_length])
+
+        if message_id != cls.message_id:
+            raise WrongMessageType("Not a port message")
+
+        return Port(port)
+
