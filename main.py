@@ -2,9 +2,9 @@ import utilities
 from torrent import Torrent
 from bcoding import bdecode
 from piece_manager import PieceManager
+import time
+import message
 
-
-# TODO: finish write_piece function, debug new added functionality
 
 if __name__ == '__main__':
 
@@ -30,10 +30,34 @@ if __name__ == '__main__':
     piece_manager = PieceManager(torrent_object)
 
     # create PeerManager object
-    manager = PeerManager(piece_manager, number_of_pieces)
+    peer_manager = PeerManager(piece_manager, number_of_pieces)
     # connect to peers and exchange handshakes with peers
-    manager.connect_to_peers(peers_list)
+    peer_manager.connect_to_peers(peers_list)
 
-    manager.test_send_interested()
+    peer_manager.test_send_interested()
     # handling incoming messages from the connected peers
-    manager.run()
+    peer_manager.run()
+
+    while not piece_manager.all_pieces_completed():
+        if peer_manager.unchoked_peers_count() < 0:
+            time.sleep(1.0)
+            continue
+        for piece in piece_manager.pieces:
+            current_index = piece.piece_index
+
+            if piece_manager.pieces[current_index].is_full:
+                continue
+
+            peer_with_piece = peer_manager.get_random_peer_with_piece(current_index)
+            if not peer_with_piece:
+                continue
+
+            data = piece_manager.pieces[current_index].get_empty_block()
+            if not data:
+                continue
+
+            piece_index, block_offset, block_length = data
+            piece_request = message.Request(piece_index, block_offset, block_length).to_bytes()
+            peer_with_piece.send_message(piece_request)
+
+        time.sleep(0.1)
