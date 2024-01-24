@@ -5,6 +5,8 @@ from math import ceil
 from utilities import BLOCK_SIZE
 from hashlib import sha1
 import os
+from time import time
+from typing import Optional, Tuple
 
 
 class Piece:
@@ -26,14 +28,35 @@ class Piece:
         if self.blocks_number > 1:
             for i in range(self.blocks_number):
                 self.blocks.append(Block())
+
+            # condition checks if there is a last block with non-standard size in the last piece
+            if (self.piece_size % BLOCK_SIZE) > 0:
+                # if so, set size of this block to the remaining data
+                self.blocks[self.blocks_number - 1].block_size = self.piece_size % BLOCK_SIZE
+
         else:
             self.blocks.append(Block(block_size=self.piece_size))
 
-    def are_blocks_full(self):
+    def are_blocks_full(self) -> bool:
         for block in self.blocks:
             if block.state == State.FREE or block.state == State.PENDING:
                 return False
         return True
+
+    def get_empty_block(self) -> Optional[Tuple[int, int, int], None]:
+        # TODO: Implement rarest_piece logic for choosing free blocks
+        """Finds a free block for requesting data from peers
+            Returns:
+                Tuple[int, int, int] -> (piece_index, block_offset, block_size) if block is FREE,
+                otherwise returns None"""
+        if self.is_full:
+            return None
+        for block_index, block in enumerate(self.blocks):
+            if block.state == State.FREE:
+                self.blocks[block_index].state = State.PENDING
+                self.blocks[block_index].last_call = time()
+                return self.piece_index, block_index * BLOCK_SIZE, block.block_size
+        return None
 
     def get_block(self, block_offset, block_length):
         return self.raw_representation[block_offset:block_length]
@@ -67,7 +90,7 @@ class Piece:
         except FileExistsError:
             logging.log(logging.ERROR, "File for the piece already exists")
 
-    def _is_piece_valid(self, data):
+    def _is_piece_valid(self, data) -> bool:
         """Compare merged blocks hash and original hash of the piece from tracker"""
         return sha1(data).digest() == self.piece_hash
 

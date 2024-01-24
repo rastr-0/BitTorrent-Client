@@ -1,5 +1,6 @@
 from enum import Enum
 from utilities import BLOCK_SIZE  # block_size --> 16KB
+from time import time
 
 
 class State(Enum):
@@ -13,3 +14,4 @@ class Block:
         self.state = state
         self.block_size = block_size
         self.data = data
+        self.last_call = time()
