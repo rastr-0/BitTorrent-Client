@@ -1,6 +1,7 @@
 import message
-from utilities import INFO_HASH, generate_client_id
+from utilities import INFO_HASH
 from block import State
+from torrent import generate_client_id
 
 import socket
 from time import time
@@ -9,6 +10,8 @@ import select
 import errno
 import logging
 from struct import unpack
+
+# TODO: figure out the usage fir last_call, now I don't validate in any way difference between curr time and last call
 
 
 class Peer:
@@ -31,6 +34,9 @@ class Peer:
         self.last_keep_alive_time = time()
         self.bitfield_size = number_of_pieces
         self.bitfield = bitstring.BitArray(self.bitfield_size)
+
+    def has_piece(self, piece_index):
+        return self.bitfield[piece_index]
 
     def read_buffer(self):
         data = b""
@@ -148,6 +154,7 @@ class Peer:
                 buffer = buffer[total_length:]
             try:
                 msg = message.MessageDispatcher(payload_param=payload).dispatch()
+                print(type(msg))
                 if msg:
                     yield msg
             except message.WrongMessageException as e:
@@ -191,6 +198,7 @@ class Peer:
         self.bitfield[msg.piece_index] = True
 
         if self.is_choking() and not self.am_interested():
+            # FIX: send request, not interested message
             interested_msg = message.Interested().to_bytes()
             self.send_message(interested_msg)
             self.states['am_interested'] = True

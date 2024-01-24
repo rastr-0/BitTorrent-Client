@@ -5,6 +5,8 @@ from peer import Peer
 import message
 import threading
 import errno
+from random import choice
+from typing import Optional
 
 
 class PeerManager:
@@ -16,6 +18,15 @@ class PeerManager:
         self.lock = threading.Lock()
         self.active = True
         self.number_of_pieces = number_of_pieces
+
+    def get_random_peer_with_piece(self, piece_index) -> Optional[Peer, None]:
+        peers_having_piece = []
+        for peer in self.connected_peers:
+            if peer.has_piece(piece_index) and peer.is_choking() and peer.am_interested():
+                peers_having_piece.append(peer)
+        if peers_having_piece:
+            return choice(peers_having_piece)
+        return None
 
     def connect_to_peers(self, peers_list: list) -> None:
         """Establish TCP connection and do handshakes with peers"""
