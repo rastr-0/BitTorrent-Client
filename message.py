@@ -34,12 +34,14 @@ class MessageDispatcher:
             2: Interested,
             3: NotInterested,
             4: Have,
-            5: BitField,  # Bitfield
-            6: Request,  # Request
-            7: Piece,  # Piece
-            8: None,  # Cancel
-            9: None,  # Port
+            5: BitField,
+            6: Request,
+            7: Piece,
+            8: Cancel,
+            9: Port
         }
+        if message_id == -1:
+            return
 
         if message_id not in messages_ids:
             raise WrongMessageType(f"Message with following id: {message_id} doesn't exist")
@@ -63,6 +65,8 @@ class HandShake(Message):
     The handshake must be 49+len(pstr) bytes long, pstr is 19 bytes long in BitTorrent v1
     So, overall length is 49+19 which gives us 68 overall length of the HandShake message
     """
+    total_length = 68
+
     def __init__(self, info_hash, peer_id):
         super(HandShake, self).__init__()
 
@@ -82,8 +86,9 @@ class HandShake(Message):
 
     @classmethod
     def from_bytes(cls, payload):
+        print(payload)
         pstrlen, = unpack(">B", payload[:1])
-        pstr, reserved, info_hash, peer_id = unpack("{}s8s20s20s".format(pstrlen), payload[1:])
+        pstr, reserved, info_hash, peer_id = unpack("{}s8s20s20s".format(pstrlen), payload[1:cls.total_length])
 
         if pstrlen != LEN_HANDSHAKE_PSTR:
             raise ValueError
@@ -237,7 +242,7 @@ class BitField(Message):
     def __init__(self, bitfield):
         super(BitField, self).__init__()
         self.bitfield = bitfield
-        self.bitfield_bytes = self.bitfield.to_bytes()
+        self.bitfield_bytes = self.bitfield.tobytes()
         self.bitfield_length = len(self.bitfield_bytes)
 
         self.payload_length = 1 + self.bitfield_length
@@ -259,7 +264,7 @@ class BitField(Message):
         if message_id != cls.message_id:
             raise WrongMessageType("Not a BitField message")
 
-        raw_bitfield = unpack(">{}s".format(bitfield_length), payload[5:5 + bitfield_length])
+        raw_bitfield, = unpack(">{}s".format(bitfield_length), payload[5:5 + bitfield_length])
         bitfield_bytes = BitArray(bytes=bytes(raw_bitfield))
 
         return BitField(bitfield_bytes)
