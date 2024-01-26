@@ -11,7 +11,7 @@ import errno
 import logging
 from struct import unpack
 
-# TODO: figure out the usage fir last_call, now I don't validate in any way difference between curr time and last call
+# TODO: figure out the usage of last_call, now I don't validate in any way difference between curr time and last call
 
 
 class Peer:
@@ -25,6 +25,7 @@ class Peer:
             'am_choking': True,
             'am_interested': False
         }
+        self.handshake_provided = False
         self.ip_address = ip
         self.port = port
         self.socket = None
@@ -64,13 +65,7 @@ class Peer:
                 print(f"BufferError occur while reading a buffer "
                       f"for the following socket: {self.socket}")
 
-        self.buffer = b""
-
-        return data
-
-    @staticmethod
-    def __is_handshake(msg):
-        return True if msg.startswith(b"\x13BitTorrent protocol") else False
+        self.buffer += data
 
     def handshake(self):
         if self.socket is None:
@@ -128,33 +123,30 @@ class Peer:
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
 
-    def process_handshake_response(self):
-        response_message = self.read_buffer()
-        logging.info(response_message)
-        return self.__is_handshake(response_message)
-
     def set_keep_alive_call(self):
         self.last_keep_alive_time = time()
 
     def get_last_keep_alive_call(self):
         return time() - self.last_keep_alive_time
 
-    @staticmethod
-    def get_message(buffer):
+    def get_message(self):
         """Determine message type and return it"""
-        while len(buffer) > 4:
-            print(buffer)
-            payload_length, = unpack(">I", buffer[:4])
+        while len(self.buffer) > 4 and self.healthy:
+            if not self.handshake_provided and self._handle_handshake():
+                continue
+            if self._handle_keep_alive():
+                continue
+
+            payload_length, = unpack(">I", self.buffer[:4])
             total_length = payload_length + 4
 
-            if len(buffer) < total_length:
+            if len(self.buffer) < total_length:
                 break
             else:
-                payload = buffer[:total_length]
-                buffer = buffer[total_length:]
+                payload = self.buffer[:total_length]
+                self.buffer = self.buffer[total_length:]
             try:
                 msg = message.MessageDispatcher(payload_param=payload).dispatch()
-                print(type(msg))
                 if msg:
                     yield msg
             except message.WrongMessageException as e:
@@ -177,6 +169,20 @@ class Peer:
 
     def am_interested(self):
         return self.states['am_interested']
+
+    @staticmethod
+    def __is_handshake(msg):
+        return True if msg.startswith(b"\x13BitTorrent protocol") else False
+
+    def _handle_handshake(self):
+        try:
+            msg = message.HandShake.from_bytes(self.buffer)
+            self.handshake_provided = True
+            self.buffer = self.buffer[msg.total_length:]
+            return True
+        except Exception:
+            self.healthy = False
+        return False
 
     def handle_choke(self):
         self.states['peer_choking'] = True
@@ -252,3 +258,15 @@ class Peer:
         if port:
             self.port = port
         logging.log(logging.INFO, "Port information was updated for peer: {self.ip_address}")
+
+    def _handle_keep_alive(self):
+        try:
+            keep_alive = message.KeepAlive.from_bytes(self.read_buffer)
+            logging.debug('handle_keep_alive - %s' % self.ip)
+        except message.WrongMessageException:
+            return False
+        except Exception:
+            return False
+
+        self.read_buffer = self.read_buffer[keep_alive.total_length:]
+        return True
