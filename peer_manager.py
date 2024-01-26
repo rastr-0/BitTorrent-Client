@@ -1,16 +1,17 @@
 import logging
 import select
-
+from threading import Thread
 from peer import Peer
 import message
 import threading
 import errno
 from random import choice
-from typing import Optional
 
 
-class PeerManager:
+class PeerManager(Thread):
     def __init__(self, piece_manager, number_of_pieces=-1):
+        Thread.__init__(self)
+
         self.piece_manager = piece_manager
 
         self.connected_peers = []
@@ -19,7 +20,7 @@ class PeerManager:
         self.active = True
         self.number_of_pieces = number_of_pieces
 
-    def get_random_peer_with_piece(self, piece_index) -> Optional[Peer, None]:
+    def get_random_peer_with_piece(self, piece_index):
         peers_having_piece = []
         for peer in self.connected_peers:
             if peer.has_piece(piece_index) and peer.is_choking() and peer.am_interested():
@@ -35,39 +36,11 @@ class PeerManager:
             peer_obj = Peer(self.piece_manager, self.number_of_pieces, peer['ip'], peer['port'])
             if peer_obj.connect():
                 handshake_sent = peer_obj.handshake()
-                handshake_received = peer_obj.process_handshake_response()
-                if handshake_sent and handshake_received:
+                if handshake_sent:
                     self.__add_peer(peer_obj)
         print("Here is the list of connected peers:")
         for connected_peer in self.connected_peers:
             print(f"ip: {connected_peer.ip_address}  port: {connected_peer.port}")
-
-    @staticmethod
-    def __read_buffer_from_socket(socket):
-        """Get data from the socket and return them in a byte-string format"""
-        buffer_size = 4096  # 2^12
-        data = b''
-        socket.setblocking(False)
-        while True:
-            try:
-                ready_to_read, _, _ = select.select([socket], [], [], 1)
-                buffer = b''
-                if ready_to_read:
-                    buffer = socket.recv(buffer_size)
-                if len(buffer) <= 0:
-                    break
-                data += buffer
-            except socket.error as e:
-                # buffer is empty
-                if e.args[0] == errno.EAGAIN or e.args[0] == errno.EWOULDBLOCK:
-                    pass
-                else:
-                    print(f"Socket-related error occur: ({e.args[0]}) while reading "
-                          f"a buffer for the following socket: {socket}")
-            except BufferError:
-                logging.exception(f"Error occur while reading a buffer for following socket: {socket}")
-
-        return data
 
     def run(self):
         """High-level messages handling function
@@ -77,39 +50,48 @@ class PeerManager:
         4 - Add payload data to the peers buffers
         """
         while self.active:
-            payload = b""
-
             for peer in self.connected_peers:
                 try:
-                    payload = peer.read_buffer()
+                    peer.read_buffer()
                 except Exception:
                     logging.error(f"Error occur while reading socket "
                                   f"for the peer with following ip: {peer.ip_address} and port: {peer.port}")
-                for peer_message in peer.get_message(payload):
+
+                for peer_message in peer.get_message():
                     self.__process_message(peer_message, peer)
 
     @staticmethod
     def __process_message(new_msg: message.Message, peer: Peer):
         """Based on the message type is called handling function"""
         if isinstance(new_msg, message.Choke):
+            print(f"Get a Choke message from peer: {peer.ip_address}")
             peer.handle_choke()
         elif isinstance(new_msg, message.Unchoke):
+            print(f"Get a UnChoke message from peer: {peer.ip_address}")
             peer.handle_unchoke()
         elif isinstance(new_msg, message.Interested):
+            print(f"Get a Interested message from peer: {peer.ip_address}")
             peer.handle_interested()
         elif isinstance(new_msg, message.NotInterested):
+            print(f"Get a NotInterested message from peer: {peer.ip_address}")
             peer.handle_not_interested()
         elif isinstance(new_msg, message.Have):
+            print(f"Get a Have message from peer: {peer.ip_address}")
             peer.handle_have(new_msg)
         elif isinstance(new_msg, message.BitField):
+            print(f"Get a BitField message from peer: {peer.ip_address}")
             peer.handle_bitfield(new_msg)
         elif isinstance(new_msg, message.Request):
+            print(f"Get a Request message from peer: {peer.ip_address}")
             peer.handle_request(new_msg)
         elif isinstance(new_msg, message.Piece):
+            print(f"Get a Piece message from peer: {peer.ip_address}")
             peer.handle_piece(new_msg)
         elif isinstance(new_msg, message.Cancel):
+            print(f"Get a Cancel message from peer: {peer.ip_address}")
             peer.handle_cancel(new_msg)
         elif isinstance(new_msg, message.Port):
+            print(f"Get a Port message from peer: {peer.ip_address}")
             peer.handle_port(new_msg)
 
     def __add_peer(self, peer: Peer):
@@ -131,11 +113,6 @@ class PeerManager:
             except ConnectionRefusedError or ConnectionError:
                 logging.log(logging.ERROR, "Unable to establish connection with peer: {peer.ip_address} : {peer.port}")
             self.connected_peers.remove(peer)
-
-    def send_keep_alive(self):
-        keep_alive_message = message.KeepAlive().to_bytes()
-        for connected_peer in self.connected_peers:
-            connected_peer.send_message(keep_alive_message)
 
     def get_peer_by_socket(self, socket):
         for peer in self.connected_peers:
