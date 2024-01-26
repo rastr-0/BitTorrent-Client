@@ -6,7 +6,6 @@ from utilities import BLOCK_SIZE
 from hashlib import sha1
 import os
 from time import time
-from typing import Optional, Tuple
 
 
 class Piece:
@@ -43,7 +42,7 @@ class Piece:
                 return False
         return True
 
-    def get_empty_block(self) -> Optional[Tuple[int, int, int], None]:
+    def get_empty_block(self):
         # TODO: Implement rarest_piece logic for choosing free blocks
         """Finds a free block for requesting data from peers
             Returns:

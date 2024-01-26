@@ -86,7 +86,6 @@ class HandShake(Message):
 
     @classmethod
     def from_bytes(cls, payload):
-        print(payload)
         pstrlen, = unpack(">B", payload[:1])
         pstr, reserved, info_hash, peer_id = unpack("{}s8s20s20s".format(pstrlen), payload[1:cls.total_length])
 
