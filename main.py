@@ -59,39 +59,9 @@ class RunBittorrent(Thread):
             time.sleep(0.1)
 
 
-def pieces_handler(piece_manager_param, peer_manager_param):
-    # FIX: instance variables of the class are not updated properly
-    #       Each process gets different copies of the object
-    while not piece_manager_param.all_pieces_completed():
-        if peer_manager_param.unchoked_peers_count() < 0:
-            time.sleep(1.0)
-            continue
-        for piece in piece_manager_param.pieces:
-            current_index = piece.piece_index
-
-            if piece_manager_param.pieces[current_index].is_full:
-                continue
-
-            peer_with_piece = peer_manager_param.get_random_peer_with_piece(current_index)
-            if not peer_with_piece:
-                continue
-
-            data = piece_manager_param.pieces[current_index].get_empty_block()
-            if not data:
-                continue
-
-            piece_index, block_offset, block_length = data
-            piece_request = message.Request(piece_index, block_offset, block_length).to_bytes()
-            print(f"Request message: {piece_request} to peer: {peer_with_piece.ip_address}")
-            peer_with_piece.send_message(piece_request)
-
-        time.sleep(0.1)
-
-
 if __name__ == '__main__':
     torrent_file = 'debian-12.4.0.iso.torrent'
 
-    # Since PeerManager is a subclass of Thread,
-    # start function calls run method of the class
-    peer_manager.start()
+    bittorrent = RunBittorrent(torrent_file)
+    bittorrent.start()
 
