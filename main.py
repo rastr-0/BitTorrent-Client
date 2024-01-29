@@ -27,8 +27,9 @@ class RunBittorrent(Thread):
         self.peer_manager = PeerManager(self.pieces_manager, self.number_of_pieces)
 
         peers_list = bdecode(self.torrent.request_to_tracker())['peers']
+        print(peers_list)
 
-        self.peer_manager.connected_peers(peers_list)
+        self.peer_manager.connect_to_peers(peers_list)
 
         self.peer_manager.start()
 
@@ -60,7 +61,7 @@ class RunBittorrent(Thread):
 
 
 if __name__ == '__main__':
-    torrent_file = 'debian-12.4.0.iso.torrent'
+    torrent_file = 'debian-12.4.0-amd64-netinst.iso.torrent'
 
     bittorrent = RunBittorrent(torrent_file)
     bittorrent.start()
