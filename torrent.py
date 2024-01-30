@@ -3,8 +3,12 @@
 from bcoding import bencode, bdecode
 from hashlib import sha1
 import requests
-from utilities import generate_client_id
 import math
+
+
+def generate_client_id():
+    client_id = b"-RS3154-1234abcdEFGH"
+    return client_id
 
 
 class Torrent:

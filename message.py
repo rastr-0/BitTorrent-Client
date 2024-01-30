@@ -25,6 +25,9 @@ class MessageDispatcher:
         try:
             if len(self.payload) >= 5:
                 payload_length, message_id, = unpack(">IB", self.payload[:5])
+                if message_id == 9:
+                    print(f"payload: {self.payload}")
+                    print(f"with following message_id: {message_id} and length: {payload_length}")
         except Exception:
             raise NotImplementedMessageError("Error occur while unpacking buffer")
 
@@ -271,7 +274,7 @@ class BitField(Message):
 
 class Request(Message):
     """The structure of request:
-        request: <len=13>(4 bytes)<id=6>(1 byte)
+        request: <len=13+X>(4 bytes + X)<id=6>(1 byte)
                 <index>(4 bytes)<begin>(4 bytes)<length>(4 bytes)"""
     message_id = 6
     payload_length = 13
@@ -302,8 +305,9 @@ class Piece(Message):
         piece: <len=0009+X>(4 bytes)<id=7>(1 byte)<index>(4 bytes)<begin>(4 bytes)
                 <block>(block_length bytes)"""
     message_id = 7
-    payload_length = 9  # +block_length
-    total_length = 4 + payload_length
+
+    payload_length = -1
+    total_length = -1
 
     def __init__(self, block_length, piece_index, block_offset, block):
         super(Piece, self).__init__()
@@ -313,17 +317,18 @@ class Piece(Message):
         self.block_offset = block_offset
         self.block = block
 
-        self.payload_length += block_length
-        self.total_length += self.payload_length
+        self.payload_length = 9 + block_length
+        self.total_length = 4 + self.payload_length
 
     def to_bytes(self):
-        return pack(">IBII{}s", self.payload_length, self.message_id,
+        return pack(">IBII{}s".format(self.block_length), self.payload_length, self.message_id,
                     self.piece_index, self.block_offset, self.block)
 
     @classmethod
     def from_bytes(cls, payload):
         block_length = len(payload) - 13
-        _, message_id, piece_index, block_offset, block = unpack(">IBII{}s", payload[:cls.total_length])
+        _, message_id, piece_index, block_offset, block = unpack(">IBII{}s".format(block_length),
+                                                                 payload[:13 + block_length])
 
         if message_id != cls.message_id:
             raise WrongMessageType("Not a piece message")
@@ -362,8 +367,8 @@ class Port(Message):
     """The structure of the request:
         <len=0003>(4 bytes)<id=9>(1 byte)<listen-port>(4 bytes)"""
     message_id = 9
-    payload_length = 4
-    total_length = 5 + payload_length
+    payload_length = 5
+    total_length = 4 + payload_length
 
     def __init__(self, port):
         super(Port, self).__init__()

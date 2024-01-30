@@ -23,7 +23,6 @@ class PeerManager(Thread):
     def get_random_peer_with_piece(self, piece_index):
         peers_having_piece = []
         for peer in self.connected_peers:
-            print(f"Handshake_state for peer {peer.ip_address}: {peer.handshake_provided}")
             # FIX: state of the handshake isn't changing
             if peer.handshake_provided:
                 first = peer.has_piece(piece_index)
@@ -32,7 +31,6 @@ class PeerManager(Thread):
                 # print(f"Interested state for peer: {peer.ip_address}")
                 if first and second and third:
                     peers_having_piece.append(peer)
-                    print(f"Peer with piece found: {peer.ip_address}")
         if peers_having_piece:
             return choice(peers_having_piece)
         return None
@@ -72,22 +70,22 @@ class PeerManager(Thread):
     def __process_message(new_msg: message.Message, peer: Peer):
         """For each incoming message is called specific handling function"""
         if isinstance(new_msg, message.Choke):
-            # print(f"Get a Choke message from peer: {peer.ip_address}")
+            print(f"Get a Choke message from peer: {peer.ip_address}")
             peer.handle_choke()
         elif isinstance(new_msg, message.Unchoke):
-            # print(f"Get a UnChoke message from peer: {peer.ip_address}")
+            print(f"Get a UnChoke message from peer: {peer.ip_address}")
             peer.handle_unchoke()
         elif isinstance(new_msg, message.Interested):
-            # print(f"Get a Interested message from peer: {peer.ip_address}")
+            print(f"Get a Interested message from peer: {peer.ip_address}")
             peer.handle_interested()
         elif isinstance(new_msg, message.NotInterested):
-            # print(f"Get a NotInterested message from peer: {peer.ip_address}")
+            print(f"Get a NotInterested message from peer: {peer.ip_address}")
             peer.handle_not_interested()
         elif isinstance(new_msg, message.Have):
-            # print(f"Get a Have message from peer: {peer.ip_address}")
+            print(f"Get a Have message from peer: {peer.ip_address}")
             peer.handle_have(new_msg)
         elif isinstance(new_msg, message.BitField):
-            # print(f"Get a BitField message from peer: {peer.ip_address}")
+            print(f"Get a BitField message from peer: {peer.ip_address}")
             peer.handle_bitfield(new_msg)
         elif isinstance(new_msg, message.Request):
             print(f"Get a Request message from peer: {peer.ip_address}")

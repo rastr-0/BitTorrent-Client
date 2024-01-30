@@ -53,11 +53,15 @@ class RunBittorrent(Thread):
                     continue
 
                 piece_index, block_offset, block_length = data
+                print(f"Piece_index: {piece_index}")
+                print(f"Block_offset: {block_offset}")
+                print(f"Block_length: {block_length}")
                 piece_request = message.Request(piece_index, block_offset, block_length).to_bytes()
                 print(f"Request message: {piece_request} to peer: {peer_with_piece.ip_address}")
                 peer_with_piece.send_message(piece_request)
+                time.sleep(5.0)
 
-            time.sleep(0.1)
+            time.sleep(1.0)
 
 
 if __name__ == '__main__':

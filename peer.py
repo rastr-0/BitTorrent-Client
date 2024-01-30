@@ -138,6 +138,9 @@ class Peer:
                 continue
 
             payload_length, = unpack(">I", self.buffer[:4])
+            # shitty workaround, needs to be fixed
+            if payload_length == 64:
+                payload_length = 16384
             total_length = payload_length + 4
 
             if len(self.buffer) < total_length:
@@ -178,7 +181,6 @@ class Peer:
         try:
             msg = message.HandShake.from_bytes(self.buffer)
             self.handshake_provided = True
-            print(f"Handshake_state for peer {self.ip_address}: {self.handshake_provided}")
             self.buffer = self.buffer[msg.total_length:]
             return True
         except Exception:
@@ -215,7 +217,6 @@ class Peer:
         if self.is_choking() and not self.am_interested():
             interested_msg = message.Interested().to_bytes()
             self.send_message(interested_msg)
-            print(f"Interested state changed for peer: {self.handshake_provided}")
             self.states['am_interested'] = True
 
     def handle_request(self, msg: message.Request):
@@ -255,9 +256,9 @@ class Peer:
                 logging.log(logging.INFO, f"Requesting was canceled for piece_hash: {piece.piece_hash}")
 
     def handle_port(self, msg: message.Port):
-        port = msg.port
-        if port:
-            self.port = port
+        # port = msg.port
+        # if port:
+            # self.port = port
         logging.log(logging.INFO, "Port information was updated for peer: {self.ip_address}")
 
     def _handle_keep_alive(self):
