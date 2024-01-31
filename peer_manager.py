@@ -1,10 +1,10 @@
 import logging
-import select
 from threading import Thread
+from pubsub import pub
+
 from peer import Peer
 import message
 import threading
-import errno
 from random import choice
 
 
@@ -20,15 +20,15 @@ class PeerManager(Thread):
         self.active = True
         self.number_of_pieces = number_of_pieces
 
+        pub.subscribe(self.request_of_piece, "PieceRequestFromPeer")
+
     def get_random_peer_with_piece(self, piece_index):
         peers_having_piece = []
         for peer in self.connected_peers:
-            # FIX: state of the handshake isn't changing
             if peer.handshake_provided:
                 first = peer.has_piece(piece_index)
                 second = peer.is_unchoking()
                 third = peer.am_interested()
-                # print(f"Interested state for peer: {peer.ip_address}")
                 if first and second and third:
                     peers_having_piece.append(peer)
         if peers_having_piece:
@@ -98,7 +98,7 @@ class PeerManager(Thread):
             peer.handle_cancel(new_msg)
         elif isinstance(new_msg, message.Port):
             print(f"Get a Port message from peer: {peer.ip_address}")
-            peer.handle_port(new_msg)
+            # peer.handle_port(new_msg)
 
     def __add_peer(self, peer: Peer):
         with self.lock:
@@ -120,12 +120,13 @@ class PeerManager(Thread):
                 logging.log(logging.ERROR, "Unable to establish connection with peer: {peer.ip_address} : {peer.port}")
             self.connected_peers.remove(peer)
 
-    def test_send_interested(self):
-        interested_message = message.Interested().to_bytes()
-        for peer in self.connected_peers:
-            peer.send_message(interested_message)
+    def request_of_piece(self, request=None, peer=None):
+        if not request or not peer:
+            return
+        piece_index, block_offset, block_length = request.piece_index, request.block_offset, request.block_length
 
-    def test_send_unchoke(self):
-        unchoke_message = message.Unchoke().to_bytes()
-        for peer in self.connected_peers:
-            peer.send_message(unchoke_message)
+        block = self.piece_manager.get_block(piece_index, block_offset, block_length)
+
+        if block:
+            piece_msg = message.Piece(piece_index, block_offset, block_length, block).to_bytes()
+            peer.send_message(piece_msg)

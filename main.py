@@ -27,13 +27,14 @@ class RunBittorrent(Thread):
         self.peer_manager = PeerManager(self.pieces_manager, self.number_of_pieces)
 
         peers_list = bdecode(self.torrent.request_to_tracker())['peers']
-        print(peers_list)
 
         self.peer_manager.connect_to_peers(peers_list)
 
         self.peer_manager.start()
 
     def run(self):
+        time.sleep(7.0)
+
         while not self.pieces_manager.all_pieces_completed():
             if self.peer_manager.unchoked_peers_count() < 0:
                 time.sleep(1.0)
@@ -52,16 +53,19 @@ class RunBittorrent(Thread):
                 if not data:
                     continue
 
-                piece_index, block_offset, block_length = data
-                print(f"Piece_index: {piece_index}")
-                print(f"Block_offset: {block_offset}")
-                print(f"Block_length: {block_length}")
-                piece_request = message.Request(piece_index, block_offset, block_length).to_bytes()
-                print(f"Request message: {piece_request} to peer: {peer_with_piece.ip_address}")
-                peer_with_piece.send_message(piece_request)
-                time.sleep(5.0)
+                self.pieces_manager.pieces[current_index].update_block_status()
 
-            time.sleep(1.0)
+                piece_index, block_offset, block_length = data
+                # print(f"Piece_index: {piece_index}")
+                # print(f"Block_offset: {block_offset}")
+                # print(f"Block_length: {block_length}")
+                # time.sleep(1.0)
+                piece_request = message.Request(piece_index, block_offset, block_length).to_bytes()
+                if peer_with_piece is not None:
+                    print(f"peer_with_piece type: {type(peer_with_piece)}")
+                    peer_with_piece.send_message(piece_request)
+
+            time.sleep(5.0)
 
 
 if __name__ == '__main__':

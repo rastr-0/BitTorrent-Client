@@ -6,6 +6,7 @@ from utilities import BLOCK_SIZE
 from hashlib import sha1
 import os
 from time import time
+from pubsub import pub
 
 
 class Piece:
@@ -36,7 +37,7 @@ class Piece:
         else:
             self.blocks.append(Block(block_size=self.piece_size))
 
-    def are_blocks_full(self) -> bool:
+    def are_blocks_full(self):
         for block in self.blocks:
             if block.state == State.FREE or block.state == State.PENDING:
                 return False
@@ -57,46 +58,48 @@ class Piece:
                 return self.piece_index, block_index * BLOCK_SIZE, block.block_size
         return None
 
+    def set_block(self, piece_offset, data):
+        piece_index = int(piece_offset / BLOCK_SIZE)
+
+        if not self.is_full and not self.blocks[piece_index].state == State.FULL:
+            self.blocks[piece_index].data = data
+            self.blocks[piece_index].state = State.FULL
+
     def get_block(self, block_offset, block_length):
         return self.raw_representation[block_offset:block_length]
 
-    def set_block(self, offset, data):
-        # index -> relative position of the block within the piece
-        index = int(offset / BLOCK_SIZE)
+    def update_block_status(self):
+        """Updates block states that were requested but never sent"""
+        for i, block in enumerate(self.blocks):
+            if block.state == State.PENDING and (time() - block.last_call) > 5:
+                self.blocks[i] = Block()
 
-        if not self.is_full and not self.blocks[index].state == State.FULL:
-            self.blocks[index].data = data
-            self.blocks[index].state = State.FULL
-
-    def write_piece(self):
-        # merge blocks to one piece
-        data = self._merge_blocks()
-        # check piece hash with original hash of the piece
-        if not self._is_piece_valid(data):
+    def verify_piece(self):
+        """Verify piece and writes data to disk"""
+        piece = self.__merge_blocks()
+        if not self.__valid_piece(piece):
             self._init_blocks()
             return False
-        # NOT the best way for saving pieces. Must be reorganized!
-        # create new dir (if doesn't exist) for pieces
-        try:
-            os.mkdir("downloaded_pieces")
-        except Exception:
-            logging.log(logging.INFO, "Directory exists")
-        try:
-            file_name = f"{sha1(data).digest()}_file"
-            f = open(file_name, "wb")
-            f.write(data)
-            f.close()
-        except FileExistsError:
-            logging.log(logging.ERROR, "File for the piece already exists")
 
-    def _is_piece_valid(self, data) -> bool:
-        """Compare merged blocks hash and original hash of the piece from tracker"""
-        return sha1(data).digest() == self.piece_hash
+        self.is_full = True
+        self.raw_representation = piece
 
-    def _merge_blocks(self):
-        """Since all blocks are full, they should be merged to one solid piece"""
-        data = b''
+        pub.sendMessage("PieceCompleted", piece_index=self.piece_index)
+
+        return True
+
+    def __merge_blocks(self):
+        """Merges all blocks data to a single solid piece"""
+        buffer = b""
+
         for block in self.blocks:
-            data += block.data
+            buffer += block.data
 
-        return data
+        return buffer
+
+    def __valid_piece(self, data):
+        """Checks hash of a piece from the tracker response with the hash of merged blocks"""
+        hash_merged_blocks = sha1(data).digest()
+        if hash_merged_blocks == self.piece_hash:
+            return True
+        return False

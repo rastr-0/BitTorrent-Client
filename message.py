@@ -26,8 +26,7 @@ class MessageDispatcher:
             if len(self.payload) >= 5:
                 payload_length, message_id, = unpack(">IB", self.payload[:5])
                 if message_id == 9:
-                    print(f"payload: {self.payload}")
-                    print(f"with following message_id: {message_id} and length: {payload_length}")
+                    print(f"PAYLOAD: {payload_length}")
         except Exception:
             raise NotImplementedMessageError("Error occur while unpacking buffer")
 
@@ -277,6 +276,7 @@ class Request(Message):
         request: <len=13+X>(4 bytes + X)<id=6>(1 byte)
                 <index>(4 bytes)<begin>(4 bytes)<length>(4 bytes)"""
     message_id = 6
+
     payload_length = 13
     total_length = 4 + payload_length
 

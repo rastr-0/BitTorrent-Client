@@ -10,6 +10,7 @@ import select
 import errno
 import logging
 from struct import unpack
+from pubsub import pub
 
 # TODO: figure out the usage of last_call, now I don't validate in any way difference between curr time and last call
 
@@ -138,16 +139,15 @@ class Peer:
                 continue
 
             payload_length, = unpack(">I", self.buffer[:4])
-            # shitty workaround, needs to be fixed
-            if payload_length == 64:
-                payload_length = 16384
             total_length = payload_length + 4
+            print(f"buffer_1: {len(self.buffer)} ")
 
             if len(self.buffer) < total_length:
                 break
             else:
                 payload = self.buffer[:total_length]
                 self.buffer = self.buffer[total_length:]
+                print(f"buffer_2: {len(self.buffer)} ")
             try:
                 msg = message.MessageDispatcher(payload_param=payload).dispatch()
                 if msg:
@@ -221,28 +221,11 @@ class Peer:
 
     def handle_request(self, msg: message.Request):
         if self.is_interested() and self.is_unchoking():
-            piece_index, block_offset, block_length = msg.piece_index, msg.block_offset, msg.block_length
-            block = self.piece_manager.get_block(piece_index, block_offset, block_length)
-            if block:
-                piece = message.Piece(piece_index, block_offset, block_length, block).to_bytes()
-                self.send_message(piece)
-                logging.info(f"Sent piece index {msg.piece_index} to peer: {self.ip_address}")
+            pub.sendMessage("PieceRequestFromPeer", request=msg, peer=self)
 
-    def handle_piece(self, msg: message.Piece):
-        piece_index, block_offset, block = msg.piece_index, msg.block_offset, msg.block
-
-        # handle case if piece is already downloaded
-        if self.piece_manager.pieces[piece_index].is_full():
-            return
-
-        self.piece_manager.pieces[piece_index].set_block(block_offset, block)
-
-        # handle case if all blocks in one piece are full
-        if not self.piece_manager.pieces[piece_index].are_blocks_full():
-            # more conditions for checking:
-            # if piece is valid: try to encrypt with hash1 and compare with initial hash of the block
-            if self.piece_manager.pieces[piece_index].write_piece():
-                self.piece_manager.completed_pieces += 1
+    @staticmethod
+    def handle_piece(msg: message.Piece):
+        pub.sendMessage("ReceiveBlock", piece=(msg.piece_index, msg.block_offset, msg.block))
 
     def handle_cancel(self, msg: message.Cancel):
         piece_index = msg.piece_index
@@ -258,13 +241,13 @@ class Peer:
     def handle_port(self, msg: message.Port):
         # port = msg.port
         # if port:
-            # self.port = port
+        # self.port = port
         logging.log(logging.INFO, "Port information was updated for peer: {self.ip_address}")
 
     def _handle_keep_alive(self):
         try:
             keep_alive = message.KeepAlive.from_bytes(self.read_buffer)
-            logging.debug('handle_keep_alive - %s' % self.ip)
+            logging.debug('handle_keep_alive - %s' % self.ip_address)
         except message.WrongMessageException:
             return False
         except Exception:
