@@ -1,9 +1,7 @@
-import pubsub
-
 from piece import Piece
 from utilities import get_pieces_hash, get_pieces_number, get_piece_length, get_torrent_total_length
 import bitstring
-from pubsub import pub
+from block import State
 
 
 class PieceManager:
@@ -16,9 +14,6 @@ class PieceManager:
         self.completed_pieces = 0
         self.bitfield = bitstring.BitArray(self.pieces_number)
         self.pieces = self._init_pieces()
-
-        pub.subscribe(self.receive_block, "ReceiveBlock")
-        pub.subscribe(self.update_bitfield, "PieceCompleted")
 
     def _init_pieces(self):
         pieces = []
@@ -53,17 +48,19 @@ class PieceManager:
                 return False
         return True
 
-    def receive_block(self, data):
-        piece_index, piece_offset, piece_data = data
+    def receive_block(self, piece_index, piece_offset, piece_data):
 
         if self.pieces[piece_index].is_full:
             return
 
         self.pieces[piece_index].set_block(piece_offset, piece_data)
-
+        print(f"NUMBER_OF_FULL_BLOCKS FOR INDEX: {piece_index}: {self.number_of_full_blocks(piece_index)}")
         if self.pieces[piece_index].are_blocks_full():
             if self.pieces[piece_index].verify_piece():
                 self.completed_pieces += 1
+
+    def number_of_full_blocks(self, piece_index):
+        return sum(1 for block in self.pieces[piece_index].blocks if block.state == State.FULL)
 
     def update_bitfield(self, piece_index):
         self.bitfield[piece_index] = 1

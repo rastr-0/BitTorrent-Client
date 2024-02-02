@@ -1,6 +1,5 @@
 from enum import Enum
 from utilities import BLOCK_SIZE  # block_size --> 16KB
-from time import time
 
 
 class State(Enum):

@@ -25,8 +25,6 @@ class MessageDispatcher:
         try:
             if len(self.payload) >= 5:
                 payload_length, message_id, = unpack(">IB", self.payload[:5])
-                if message_id == 9:
-                    print(f"PAYLOAD: {payload_length}")
         except Exception:
             raise NotImplementedMessageError("Error occur while unpacking buffer")
 
@@ -42,7 +40,7 @@ class MessageDispatcher:
             8: Cancel,
             9: Port
         }
-        if message_id == -1:
+        if message_id < 0 or message_id > 9:
             return
 
         if message_id not in messages_ids:
@@ -385,4 +383,3 @@ class Port(Message):
             raise WrongMessageType("Not a port message")
 
         return Port(port)
-

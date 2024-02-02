@@ -49,10 +49,10 @@ class Peer:
             try:
                 ready_to_read, _, _ = select.select([self.socket], [], [], 1)
                 if ready_to_read:
-                    self.buffer = self.socket.recv(buffer_size)
-                    if len(self.buffer) <= 0:
+                    data_from_socket = self.socket.recv(buffer_size)
+                    if len(data_from_socket) <= 0:
                         break
-                    data += self.buffer
+                    data += data_from_socket
                 else:
                     break
             except socket.error as e:
@@ -116,7 +116,8 @@ class Peer:
             self.healthy = True
             self.last_call = time()
         except ConnectionError as ce:
-            print(f"Connection error: {ce}")
+            print(f"Connection error: {ce} for peer: {self.ip_address} | {self.port}")
+            self.healthy = False
         except TimeoutError as te:
             print(f"Timeout error: {te}")
         except OSError as oe:
@@ -130,30 +131,26 @@ class Peer:
     def get_last_keep_alive_call(self):
         return time() - self.last_keep_alive_time
 
-    def get_message(self):
-        """Determine message type and return it"""
+    def get_messages(self):
         while len(self.buffer) > 4 and self.healthy:
-            if not self.handshake_provided and self._handle_handshake():
-                continue
-            if self._handle_keep_alive():
+            if (not self.handshake_provided and self._handle_handshake()) or self._handle_keep_alive():
                 continue
 
             payload_length, = unpack(">I", self.buffer[:4])
             total_length = payload_length + 4
-            print(f"buffer_1: {len(self.buffer)} ")
 
             if len(self.buffer) < total_length:
                 break
             else:
                 payload = self.buffer[:total_length]
                 self.buffer = self.buffer[total_length:]
-                print(f"buffer_2: {len(self.buffer)} ")
+
             try:
-                msg = message.MessageDispatcher(payload_param=payload).dispatch()
-                if msg:
-                    yield msg
+                received_message = message.MessageDispatcher(payload).dispatch()
+                if received_message:
+                    yield received_message
             except message.WrongMessageException as e:
-                logging.error(e.__str__())
+                logging.exception(e.__str__())
 
     def am_choking(self):
         return self.states['am_choking']
@@ -223,9 +220,9 @@ class Peer:
         if self.is_interested() and self.is_unchoking():
             pub.sendMessage("PieceRequestFromPeer", request=msg, peer=self)
 
-    @staticmethod
-    def handle_piece(msg: message.Piece):
-        pub.sendMessage("ReceiveBlock", piece=(msg.piece_index, msg.block_offset, msg.block))
+    def handle_piece(self, msg: message.Piece):
+        print(f"HANDLING_PIECE WITH INDEX: {msg.piece_index}")
+        self.piece_manager.receive_block(msg.piece_index, msg.block_offset, msg.block)
 
     def handle_cancel(self, msg: message.Cancel):
         piece_index = msg.piece_index

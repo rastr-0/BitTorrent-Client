@@ -4,7 +4,6 @@ from block import Block, State
 from math import ceil
 from utilities import BLOCK_SIZE
 from hashlib import sha1
-import os
 from time import time
 from pubsub import pub
 

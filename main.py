@@ -5,6 +5,7 @@ from piece_manager import PieceManager
 import time
 import message
 from threading import Thread
+from block import State
 
 
 # TODO: figure out the way to share instance variables of the PeerManager class between child and parent processes
@@ -14,9 +15,13 @@ from threading import Thread
 class RunBittorrent(Thread):
     def __init__(self, torrent_path):
         super().__init__()
+        self.completed_blocks_number = 0
+        self.completed_percentage = 0
 
         self.torrent = Torrent()
         self.torrent.load_file(torrent_path)
+
+        self.file_length = utilities.get_torrent_total_length(self.torrent)
 
         self.pieces_manager = PieceManager(self.torrent)
 
@@ -33,6 +38,8 @@ class RunBittorrent(Thread):
         self.peer_manager.start()
 
     def run(self):
+        print(f"Number of blocks in each piece: {len(self.pieces_manager.pieces[0].blocks)}")
+        # wait for the peers do initials steps, needs to be implemented other way
         time.sleep(7.0)
 
         while not self.pieces_manager.all_pieces_completed():
@@ -56,16 +63,29 @@ class RunBittorrent(Thread):
                 self.pieces_manager.pieces[current_index].update_block_status()
 
                 piece_index, block_offset, block_length = data
-                # print(f"Piece_index: {piece_index}")
-                # print(f"Block_offset: {block_offset}")
-                # print(f"Block_length: {block_length}")
-                # time.sleep(1.0)
                 piece_request = message.Request(piece_index, block_offset, block_length).to_bytes()
                 if peer_with_piece is not None:
-                    print(f"peer_with_piece type: {type(peer_with_piece)}")
                     peer_with_piece.send_message(piece_request)
+                    time.sleep(1.0)
 
-            time.sleep(5.0)
+                self.display_downloading_process()
+
+    def display_downloading_process(self):
+        # used for displaying only updated percentage
+
+        blocks_completed = 0
+
+        for i, piece in enumerate(self.pieces_manager.pieces):
+            blocks_completed += sum(1 for block in piece.blocks if block.state == State.FULL)
+            # downloaded_data += piece[i].data
+
+        if blocks_completed > 0 and blocks_completed != self.completed_blocks_number:
+            # print(f"Completed blocks{blocks_completed}")
+            self.completed_blocks_number = blocks_completed
+            percentage = round((self.completed_blocks_number // 16 * 100) / self.number_of_pieces, 2)
+            if percentage != self.completed_percentage:
+                self.completed_percentage = percentage
+                print(f"Downloaded {self.completed_percentage} %")
 
 
 if __name__ == '__main__':
@@ -73,4 +93,3 @@ if __name__ == '__main__':
 
     bittorrent = RunBittorrent(torrent_file)
     bittorrent.start()
-
