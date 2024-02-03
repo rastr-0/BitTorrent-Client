@@ -84,7 +84,6 @@ class Peer:
         try:
             self.socket = socket.create_connection((self.ip_address, self.port), timeout=2)
             self.socket.setblocking(False)
-            self.healthy = True
             logging.log(logging.INFO, f"Connection with peer {self.ip_address} established")
 
         except TimeoutError:
@@ -221,7 +220,7 @@ class Peer:
             pub.sendMessage("PieceRequestFromPeer", request=msg, peer=self)
 
     def handle_piece(self, msg: message.Piece):
-        print(f"HANDLING_PIECE WITH INDEX: {msg.piece_index}")
+        # print(f"HANDLING_PIECE WITH INDEX: {msg.piece_index}")
         self.piece_manager.receive_block(msg.piece_index, msg.block_offset, msg.block)
 
     def handle_cancel(self, msg: message.Cancel):

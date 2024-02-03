@@ -1,11 +1,8 @@
-import logging
-
 from block import Block, State
 from math import ceil
 from utilities import BLOCK_SIZE
 from hashlib import sha1
 from time import time
-from pubsub import pub
 
 
 class Piece:
@@ -44,6 +41,7 @@ class Piece:
 
     def get_empty_block(self):
         # TODO: Implement rarest_piece logic for choosing free blocks
+
         """Finds a free block for requesting data from peers
             Returns:
                 Tuple[int, int, int] -> (piece_index, block_offset, block_size) if block is FREE,
@@ -63,6 +61,7 @@ class Piece:
         if not self.is_full and not self.blocks[piece_index].state == State.FULL:
             self.blocks[piece_index].data = data
             self.blocks[piece_index].state = State.FULL
+            # write received block to the file
 
     def get_block(self, block_offset, block_length):
         return self.raw_representation[block_offset:block_length]
@@ -83,7 +82,7 @@ class Piece:
         self.is_full = True
         self.raw_representation = piece
 
-        pub.sendMessage("PieceCompleted", piece_index=self.piece_index)
+        # update bitfield
 
         return True
 

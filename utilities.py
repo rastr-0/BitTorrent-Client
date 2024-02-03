@@ -19,6 +19,7 @@ def get_piece_length(torrent_file: Torrent):
 
 
 BLOCK_SIZE = 2 ** 14  # 16KB
+BLOCKS_IN_PIECE = 16
 LOG = logging.getLogger('')
 INFO_HASH = None
 HANDSHAKE_PSTR = b"BitTorrent protocol"

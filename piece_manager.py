@@ -54,9 +54,9 @@ class PieceManager:
             return
 
         self.pieces[piece_index].set_block(piece_offset, piece_data)
-        print(f"NUMBER_OF_FULL_BLOCKS FOR INDEX: {piece_index}: {self.number_of_full_blocks(piece_index)}")
         if self.pieces[piece_index].are_blocks_full():
             if self.pieces[piece_index].verify_piece():
+                self.update_bitfield(piece_index)
                 self.completed_pieces += 1
 
     def number_of_full_blocks(self, piece_index):

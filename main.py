@@ -6,11 +6,12 @@ import time
 import message
 from threading import Thread
 from block import State
+from file_writer import BlockSaver
 
 
-# TODO: figure out the way to share instance variables of the PeerManager class between child and parent processes
-#   Now the main problem is that pieces_handler works with the copy of PeerManager object
-#   and connect_peers list is NOT updated
+# TODO: implement logic for allocating space in result file
+#  and saving already downloaded blocks to the right place in the file
+#  blocks saving logic can be run in another Thread with usage of mmap
 
 class RunBittorrent(Thread):
     def __init__(self, torrent_path):
@@ -24,6 +25,7 @@ class RunBittorrent(Thread):
         self.file_length = utilities.get_torrent_total_length(self.torrent)
 
         self.pieces_manager = PieceManager(self.torrent)
+        # self.blocks_writer = BlockSaver(self.pieces_manager)
 
         utilities.INFO_HASH = self.torrent.info_hash
         self.number_of_pieces = utilities.get_pieces_number(self.torrent)
@@ -35,10 +37,11 @@ class RunBittorrent(Thread):
 
         self.peer_manager.connect_to_peers(peers_list)
 
+        # running functions in threads
         self.peer_manager.start()
+        # self.blocks_writer.start()
 
     def run(self):
-        print(f"Number of blocks in each piece: {len(self.pieces_manager.pieces[0].blocks)}")
         # wait for the peers do initials steps, needs to be implemented other way
         time.sleep(7.0)
 
@@ -65,22 +68,20 @@ class RunBittorrent(Thread):
                 piece_index, block_offset, block_length = data
                 piece_request = message.Request(piece_index, block_offset, block_length).to_bytes()
                 if peer_with_piece is not None:
+                    if not peer_with_piece.healthy:
+                        self.peer_manager.disconnect_peer(peer_with_piece)
                     peer_with_piece.send_message(piece_request)
-                    time.sleep(1.0)
+                    time.sleep(0.1)
 
                 self.display_downloading_process()
 
     def display_downloading_process(self):
-        # used for displaying only updated percentage
-
         blocks_completed = 0
 
         for i, piece in enumerate(self.pieces_manager.pieces):
             blocks_completed += sum(1 for block in piece.blocks if block.state == State.FULL)
-            # downloaded_data += piece[i].data
 
         if blocks_completed > 0 and blocks_completed != self.completed_blocks_number:
-            # print(f"Completed blocks{blocks_completed}")
             self.completed_blocks_number = blocks_completed
             percentage = round((self.completed_blocks_number // 16 * 100) / self.number_of_pieces, 2)
             if percentage != self.completed_percentage:
