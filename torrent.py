@@ -72,7 +72,7 @@ class Torrent:
         if tracker_response:
             return tracker_response.text
         else:
-            return "Error occurs"
+            return "Error occurred"
 
     def get_pieces_amount(self):
         return self.number_of_pieces
