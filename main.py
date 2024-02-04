@@ -25,7 +25,7 @@ class RunBittorrent(Thread):
         self.file_length = utilities.get_torrent_total_length(self.torrent)
 
         self.pieces_manager = PieceManager(self.torrent)
-        # self.blocks_writer = BlockSaver(self.pieces_manager)
+        self.blocks_writer = BlockSaver(self.pieces_manager, "downloaded_file")
 
         utilities.INFO_HASH = self.torrent.info_hash
         self.number_of_pieces = utilities.get_pieces_number(self.torrent)
@@ -37,14 +37,11 @@ class RunBittorrent(Thread):
 
         self.peer_manager.connect_to_peers(peers_list)
 
-        # running functions in threads
+        # run functions in threads
         self.peer_manager.start()
-        # self.blocks_writer.start()
+        self.blocks_writer.start()
 
     def run(self):
-        # wait for the peers do initials steps, needs to be implemented other way
-        time.sleep(7.0)
-
         while not self.pieces_manager.all_pieces_completed():
             if self.peer_manager.unchoked_peers_count() < 0:
                 time.sleep(1.0)
@@ -83,10 +80,12 @@ class RunBittorrent(Thread):
 
         if blocks_completed > 0 and blocks_completed != self.completed_blocks_number:
             self.completed_blocks_number = blocks_completed
-            percentage = round((self.completed_blocks_number // 16 * 100) / self.number_of_pieces, 2)
+            percentage = round((self.completed_blocks_number // utilities.BLOCKS_IN_PIECE * 100) / self.number_of_pieces, 2)
             if percentage != self.completed_percentage:
                 self.completed_percentage = percentage
                 print(f"Downloaded {self.completed_percentage} %")
+                # active_peers = [peer.ip_address for peer in self.peer_manager.connected_peers if peer.handshake_provided]
+                # print(f"Number of active peers: {len(active_peers)}")
 
 
 if __name__ == '__main__':

@@ -26,10 +26,7 @@ class PeerManager(Thread):
         peers_having_piece = []
         for peer in self.connected_peers:
             if peer.handshake_provided:
-                first = peer.has_piece(piece_index)
-                second = peer.is_unchoking()
-                third = peer.am_interested()
-                if first and second and third:
+                if peer.has_piece(piece_index) and peer.is_unchoking() and peer.am_interested():
                     peers_having_piece.append(peer)
         if peers_having_piece:
             return choice(peers_having_piece)
@@ -60,7 +57,7 @@ class PeerManager(Thread):
                 try:
                     peer.read_buffer()
                 except Exception:
-                    logging.error(f"Error occur while reading socket "
+                    logging.error(f"Error occurred while reading socket "
                                   f"for the peer with following ip: {peer.ip_address} and port: {peer.port}")
                     self.disconnect_peer(peer)
 
@@ -92,14 +89,15 @@ class PeerManager(Thread):
             # print(f"Get a Request message from peer: {peer.ip_address}")
             peer.handle_request(new_msg)
         elif isinstance(new_msg, message.Piece):
-            print(f"Got a part of Piece from peer: {peer.ip_address}")
+            # print(f"Got a part of Piece from peer: {peer.ip_address}")
             peer.handle_piece(new_msg)
         elif isinstance(new_msg, message.Cancel):
             # print(f"Get a Cancel message from peer: {peer.ip_address}")
             peer.handle_cancel(new_msg)
         elif isinstance(new_msg, message.Port):
-            print(f"Get a Port message from peer: {peer.ip_address}")
-            # peer.handle_port(new_msg)
+            # print(f"Get a Port message from peer: {peer.ip_address}")
+            # functionality is not implemented for handle_port
+            peer.handle_port()
 
     def __add_peer(self, peer: Peer):
         with self.lock:

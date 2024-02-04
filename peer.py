@@ -60,10 +60,10 @@ class Peer:
                 if e.args[0] == errno.EAGAIN or e.args[0] == errno.EWOULDBLOCK:
                     pass
                 else:
-                    print(f"Socket-related error occur: ({e.args[0]}) while reading "
+                    print(f"Socket-related error occurred: ({e.args[0]}) while reading "
                           f"a buffer for the following socket: {self.socket}")
             except BufferError:
-                print(f"BufferError occur while reading a buffer "
+                print(f"BufferError occurred while reading a buffer "
                       f"for the following socket: {self.socket}")
 
         self.buffer += data
@@ -74,7 +74,7 @@ class Peer:
         try:
             handshake = message.HandShake(info_hash=INFO_HASH, peer_id=generate_client_id()).to_bytes()
             self.send_message(msg=handshake)
-            logging.log(logging.INFO, "HandShake was sent to user with following ip: {self.ip_address}")
+            logging.log(logging.INFO, f"HandShake was sent to user with following ip: {self.ip_address}")
             return True
         except ConnectionError:
             logging.exception(f"HandShake was not sent to user with following ip: {self.ip_address}")
@@ -234,7 +234,7 @@ class Peer:
                 piece.blocks = []
                 logging.log(logging.INFO, f"Requesting was canceled for piece_hash: {piece.piece_hash}")
 
-    def handle_port(self, msg: message.Port):
+    def handle_port(self):
         # port = msg.port
         # if port:
         # self.port = port
