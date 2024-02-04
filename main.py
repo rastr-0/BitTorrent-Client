@@ -9,10 +9,6 @@ from block import State
 from file_writer import BlockSaver
 
 
-# TODO: implement logic for allocating space in result file
-#  and saving already downloaded blocks to the right place in the file
-#  blocks saving logic can be run in another Thread with usage of mmap
-
 class RunBittorrent(Thread):
     def __init__(self, torrent_path):
         super().__init__()
