@@ -5,6 +5,9 @@ from hashlib import sha1
 import requests
 import math
 
+# TODO:
+#   Implement functionality for handling .torrent files with more than 1 downloading files.
+
 
 def generate_client_id():
     client_id = b"-RS3154-1234abcdEFGH"
@@ -47,8 +50,6 @@ class Torrent:
         self.announce_list = self.__get_trackers()
         self.number_of_pieces = math.ceil(self.file_size / self.piece_length)
 
-        return self
-
     def __get_trackers(self):
         # handle multi-file structure
         if 'announce_list' in self.decoded_file:
@@ -74,5 +75,5 @@ class Torrent:
         else:
             return "Error occurred"
 
-    def get_pieces_amount(self):
-        return self.number_of_pieces
+    def get_filename(self):
+        return self.decoded_file['info']['name']

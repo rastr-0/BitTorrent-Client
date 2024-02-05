@@ -21,7 +21,7 @@ class RunBittorrent(Thread):
         self.file_length = utilities.get_torrent_total_length(self.torrent)
 
         self.pieces_manager = PieceManager(self.torrent)
-        self.blocks_writer = BlockSaver(self.pieces_manager, "downloaded_file")
+        self.blocks_writer = BlockSaver(self.pieces_manager, self.torrent.get_filename())
 
         utilities.INFO_HASH = self.torrent.info_hash
         self.number_of_pieces = utilities.get_pieces_number(self.torrent)
