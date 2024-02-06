@@ -5,6 +5,7 @@
 - [Components](#components)
 - [Installation](#installation)
 - [Problems](#problems)
+- [Resources](#resources)
 
 ## Overview
 This is a bittorrent client implementation with Python. I want to emphasize that this is just a basic implementation made by layman in bittorrents and programming in general.
@@ -61,3 +62,10 @@ As I wrote in an overview part my project is a basic implementation with plenty 
   * They way pieces are downloaded. Blocks are requested not one by one in the same piece, but one by one from different pieces (first block from each piece; second block each piece...). There is following deriving problem from it:
     * Peer can't start participating as a seeder while downloading pieces, because peer will have 1 fully downloaded piece (n downloaded blocks) only after downloading (n-1 blocks for other pieces)
   * No ability to stop downloading process and continue with already downloaded pieces (not to start over)
+
+## Resources
+This project wouldn't exist without these resources and projects:
+  * https://wiki.theory.org/BitTorrentSpecification (Bittorrent Protocol Specification)
+  * https://roadmap.sh/guides/torrent-client (Implementation with JS, author explains everything in simple words)
+  * https://github.com/gallexis/PyTorrent (Absolutely great implementation of BitTorrent from @gallexis, my messages classes are 100% based on this project messages classes)
+  * https://github.com/SimplyAhmazing (Also useful stuff, @SimpleAhmazing also has lecture on YouTube about Bittorrent implementation with python)
