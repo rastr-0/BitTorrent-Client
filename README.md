@@ -3,11 +3,11 @@
 ## Description
 This is bittorrent client implementation with Python.
 Main features:
-1) Torrent File Parsing:
+# Torrent File Parsing:
   * The client has the ability to parse .torrent files, extracting essential information required for the download process
-2) Tracker Communication:
+# Tracker Communication:
   * The client can make requests to trackers, although currently limited to trackers that support HTTP responses. Implementation for UDP trackers is in progress
-3) Bittorrent Message Logic
+# Bittorrent Message Logic
   * The client implements the core logic for handling various Bittorrent messages:
     * Choke/UnChoke messages: indicating whether the client is allowed to downloaded from the peer
     * Interested/NotInterested messages: indicating whether the peer is interested in downloading piece
