@@ -85,7 +85,8 @@ class RunBittorrent(Thread):
 
 
 if __name__ == '__main__':
-    torrent_file = 'debian-12.4.0-amd64-netinst.iso.torrent'
+    print("Your .torrent file: ")
+    torrent_file = str(input())
 
     bittorrent = RunBittorrent(torrent_file)
     bittorrent.start()
