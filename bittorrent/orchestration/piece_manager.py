@@ -1,15 +1,15 @@
-from bittorrent.domain.piece import Piece
-from bittorrent.domain.block import State
-from utilities import get_pieces_hash, get_pieces_number, get_piece_length, get_torrent_total_length
 import bitstring
+
+from bittorrent.domain.block import State
+from bittorrent.domain.piece import Piece
 
 
 class PieceManager:
-    def __init__(self, torrent_object):
-        self.pieces_number = get_pieces_number(torrent_object)
-        self.pieces_hash = get_pieces_hash(torrent_object)
-        self.piece_length = get_piece_length(torrent_object)
-        self.total_pieces_length = get_torrent_total_length(torrent_object)
+    def __init__(self, meta):
+        self.pieces_number = meta.number_of_pieces
+        self.pieces_hash = meta.pieces_hash
+        self.piece_length = meta.piece_length
+        self.total_pieces_length = meta.file_size
 
         self.completed_pieces = 0
         self.bitfield = bitstring.BitArray(self.pieces_number)
@@ -17,18 +17,17 @@ class PieceManager:
 
     def _init_pieces(self):
         pieces = []
-        start_index, end_index = 0, 0
 
-        # all pieces, except the last one: can be shorter than others
         for i in range(self.pieces_number - 1):
-            # length of each piece_hash is 20 bytes
-            start_index = i * 20
-            end_index = start_index + 20
-            pieces.append(Piece(i, self.piece_length, self.pieces_hash[start_index:end_index]))
+            start = i * 20
+            pieces.append(Piece(i, self.piece_length, self.pieces_hash[start:start + 20]))
 
-        # the last one piece case
-        last_piece_length = self.total_pieces_length - (self.pieces_number - 1) * self.piece_length
-        pieces.append(Piece(self.pieces_number - 1, last_piece_length, self.pieces_hash[start_index:end_index]))
+        # Last piece uses its own correct hash slice and may be shorter than piece_length
+        last_start = (self.pieces_number - 1) * 20
+        last_length = self.total_pieces_length - (self.pieces_number - 1) * self.piece_length
+        pieces.append(
+            Piece(self.pieces_number - 1, last_length, self.pieces_hash[last_start:last_start + 20])
+        )
 
         return pieces
 
@@ -37,19 +36,13 @@ class PieceManager:
             if piece_index == piece.piece_index:
                 if piece.is_full:
                     return piece.get_block(block_offset, block_length)
-                else:
-                    break
-
+                break
         return None
 
     def all_pieces_completed(self):
-        for piece in self.pieces:
-            if not piece.is_full:
-                return False
-        return True
+        return all(piece.is_full for piece in self.pieces)
 
     def receive_block(self, piece_index, piece_offset, piece_data):
-
         if self.pieces[piece_index].is_full:
             return
 
@@ -64,6 +57,3 @@ class PieceManager:
 
     def update_bitfield(self, piece_index):
         self.bitfield[piece_index] = 1
-
-
-

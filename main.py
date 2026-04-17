@@ -1,97 +1,21 @@
-import utilities
-from torrent import Torrent
-from piece_manager import PieceManager
-import time
-from bittorrent.domain import message
-from bittorrent.domain.block import State
-from bittorrent.network.peer_manager import PeerManager
+from bittorrent.domain.torrent_meta import TorrentMeta
 from bittorrent.network.tracker import HTTPTracker
-from file_writer import BlockSaver
-from threading import Thread
-
-
-class RunBittorrent(Thread):
-    def __init__(self, torrent_path):
-        super().__init__()
-        self.completed_blocks_number = 0
-        self.completed_percentage = 0
-
-        self.torrent = Torrent()
-        self.torrent.load_file(torrent_path)
-
-        self.file_length = self.torrent.file_size
-        self.number_of_pieces = self.torrent.number_of_pieces
-
-        self.pieces_manager = PieceManager(self.torrent)
-        self.blocks_writer = BlockSaver(self.pieces_manager, self.torrent.get_filename())
-
-        tracker = HTTPTracker(
-            announce_url=self.torrent.announce_list[0][0],
-            info_hash=self.torrent.info_hash,
-            peer_id=self.torrent.peer_id,
-        )
-        tracker.set_stats(left=self.file_length)
-
-        self.peer_manager = PeerManager(
-            self.pieces_manager,
-            info_hash=self.torrent.info_hash,
-            number_of_pieces=self.number_of_pieces,
-        )
-
-        peers_list = tracker.get_peers()
-        self.peer_manager.connect_to_peers(peers_list)
-
-        self.peer_manager.start()
-        self.blocks_writer.start()
-
-    def run(self):
-        while not self.pieces_manager.all_pieces_completed():
-            if self.peer_manager.unchoked_peers_count() < 0:
-                time.sleep(1.0)
-                continue
-            for piece in self.pieces_manager.pieces:
-                current_index = piece.piece_index
-
-                if self.pieces_manager.pieces[current_index].is_full:
-                    continue
-
-                peer_with_piece = self.peer_manager.get_random_peer_with_piece(current_index)
-                if not peer_with_piece:
-                    continue
-
-                data = self.pieces_manager.pieces[current_index].get_empty_block()
-                if not data:
-                    continue
-
-                self.pieces_manager.pieces[current_index].update_block_status()
-
-                piece_index, block_offset, block_length = data
-                piece_request = message.Request(piece_index, block_offset, block_length).to_bytes()
-                if peer_with_piece is not None:
-                    if not peer_with_piece.healthy:
-                        self.peer_manager.disconnect_peer(peer_with_piece)
-                    peer_with_piece.send_message(piece_request)
-                    time.sleep(0.1)
-
-                self.display_downloading_process()
-
-    def display_downloading_process(self):
-        blocks_completed = 0
-
-        for i, piece in enumerate(self.pieces_manager.pieces):
-            blocks_completed += sum(1 for block in piece.blocks if block.state == State.FULL)
-
-        if blocks_completed > 0 and blocks_completed != self.completed_blocks_number:
-            self.completed_blocks_number = blocks_completed
-            percentage = round((self.completed_blocks_number // utilities.BLOCKS_IN_PIECE * 100) / self.number_of_pieces, 2)
-            if percentage != self.completed_percentage:
-                self.completed_percentage = percentage
-                print(f"Downloaded {self.completed_percentage} %")
-
+from bittorrent.orchestration.torrent_session import TorrentSession
 
 if __name__ == '__main__':
     print("Your .torrent file: ")
     torrent_file = str(input())
 
-    bittorrent = RunBittorrent(torrent_file)
-    bittorrent.start()
+    meta = TorrentMeta()
+    meta.load_file(torrent_file)
+
+    tracker = HTTPTracker(
+        announce_url=meta.announce_list[0][0],
+        info_hash=meta.info_hash,
+        peer_id=meta.peer_id,
+    )
+    tracker.set_stats(left=meta.file_size)
+
+    session = TorrentSession(meta, tracker, meta.get_filename())
+    session.start()
+    session.join()
