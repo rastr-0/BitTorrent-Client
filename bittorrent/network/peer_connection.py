@@ -1,7 +1,6 @@
-import message
-from utilities import INFO_HASH
-from block import State
-from torrent import generate_client_id
+from bittorrent.domain import message
+from bittorrent.domain.block import State
+from bittorrent.domain.torrent_meta import CLIENT_ID
 
 import socket
 from time import time
@@ -12,19 +11,18 @@ import logging
 from struct import unpack
 from pubsub import pub
 
-# TODO: figure out the usage of last_call, now I don't validate in any way difference between curr time and last call
-
 
 class Peer:
-    # FIX: I don't like the way how I pass number_of_pieces, utilities.py has a function for this
-    def __init__(self, piece_manager, number_of_pieces, ip, port=6881):
+    def __init__(self, piece_manager, number_of_pieces: int, ip: str,
+                 info_hash: bytes, port: int = 6881):
         self.piece_manager = piece_manager
+        self.info_hash = info_hash
 
         self.states = {
-            "peer_choking": True,
-            "peer_interested": False,
-            "am_choking": True,
-            "am_interested": False,
+            'peer_choking': True,
+            'peer_interested': False,
+            'am_choking': True,
+            'am_interested': False
         }
         self.handshake_provided = False
         self.ip_address = ip
@@ -42,7 +40,6 @@ class Peer:
 
     def read_buffer(self):
         data = b""
-        # parameter for socket.recv function should be small power of 2 -> 4096 (2^12)
         buffer_size = 4096
         self.socket.setblocking(False)
         while True:
@@ -56,19 +53,14 @@ class Peer:
                 else:
                     break
             except socket.error as e:
-                # buffer is empty
                 if e.args[0] == errno.EAGAIN or e.args[0] == errno.EWOULDBLOCK:
                     pass
                 else:
-                    print(
-                        f"Socket-related error occurred: ({e.args[0]}) while reading "
-                        f"a buffer for the following socket: {self.socket}"
-                    )
+                    print(f"Socket-related error occurred: ({e.args[0]}) while reading "
+                          f"a buffer for the following socket: {self.socket}")
             except BufferError:
-                print(
-                    f"BufferError occurred while reading a buffer "
-                    f"for the following socket: {self.socket}"
-                )
+                print(f"BufferError occurred while reading a buffer "
+                      f"for the following socket: {self.socket}")
 
         self.buffer += data
 
@@ -76,30 +68,19 @@ class Peer:
         if self.socket is None:
             return False
         try:
-            handshake = message.HandShake(
-                info_hash=INFO_HASH, peer_id=generate_client_id()
-            ).to_bytes()
+            handshake = message.HandShake(info_hash=self.info_hash, peer_id=CLIENT_ID).to_bytes()
             self.send_message(msg=handshake)
-            logging.log(
-                logging.INFO,
-                f"HandShake was sent to user with following ip: {self.ip_address}",
-            )
+            logging.log(logging.INFO, f"HandShake was sent to user with following ip: {self.ip_address}")
             return True
         except ConnectionError:
-            logging.exception(
-                f"HandShake was not sent to user with following ip: {self.ip_address}"
-            )
+            logging.exception(f"HandShake was not sent to user with following ip: {self.ip_address}")
         return False
 
     def connect(self):
         try:
-            self.socket = socket.create_connection(
-                (self.ip_address, self.port), timeout=2
-            )
+            self.socket = socket.create_connection((self.ip_address, self.port), timeout=2)
             self.socket.setblocking(False)
-            logging.log(
-                logging.INFO, f"Connection with peer {self.ip_address} established"
-            )
+            logging.log(logging.INFO, f"Connection with peer {self.ip_address} established")
 
         except TimeoutError:
             logging.log(logging.INFO, f"Failed to connect to peer {self.ip_address}")
@@ -109,9 +90,7 @@ class Peer:
             return False
         except OSError as e:
             if "[Errno 113] No route to host" in str(e):
-                logging.log(
-                    logging.INFO, f"No route to host for peer {self.ip_address}"
-                )
+                logging.log(logging.INFO, f"No route to host for peer {self.ip_address}")
             else:
                 logging.log(logging.INFO, f"OSError: {e}")
             return False
@@ -124,10 +103,7 @@ class Peer:
                 self.socket.close()
             self.healthy = False
         except (socket.error, OSError, AttributeError, BlockingIOError) as e:
-            logging.log(
-                logging.INFO,
-                f"Error disconnecting from {self.ip_address}:{self.port}: {e}",
-            )
+            logging.log(logging.INFO, f"Error disconnecting from {self.ip_address}:{self.port}: {e}")
 
     def send_message(self, msg):
         try:
@@ -152,12 +128,10 @@ class Peer:
 
     def get_messages(self):
         while len(self.buffer) > 4 and self.healthy:
-            if (
-                not self.handshake_provided and self._handle_handshake()
-            ) or self._handle_keep_alive():
+            if (not self.handshake_provided and self._handle_handshake()) or self._handle_keep_alive():
                 continue
 
-            (payload_length,) = unpack(">I", self.buffer[:4])
+            payload_length, = unpack(">I", self.buffer[:4])
             total_length = payload_length + 4
 
             if len(self.buffer) < total_length:
@@ -174,22 +148,22 @@ class Peer:
                 logging.exception(e.__str__())
 
     def am_choking(self):
-        return self.states["am_choking"]
+        return self.states['am_choking']
 
     def am_unchoking(self):
-        return not self.states["am_choking"]
+        return not self.states['am_choking']
 
     def is_choking(self):
-        return self.states["peer_choking"]
+        return self.states['peer_choking']
 
     def is_unchoking(self):
-        return not self.states["peer_choking"]
+        return not self.states['peer_choking']
 
     def is_interested(self):
-        return self.states["peer_interested"]
+        return self.states['peer_interested']
 
     def am_interested(self):
-        return self.states["am_interested"]
+        return self.states['am_interested']
 
     @staticmethod
     def __is_handshake(msg):
@@ -199,27 +173,27 @@ class Peer:
         try:
             msg = message.HandShake.from_bytes(self.buffer)
             self.handshake_provided = True
-            self.buffer = self.buffer[msg.total_length :]
+            self.buffer = self.buffer[msg.total_length:]
             return True
         except Exception:
             self.healthy = False
         return False
 
     def handle_choke(self):
-        self.states["peer_choking"] = True
+        self.states['peer_choking'] = True
 
     def handle_unchoke(self):
-        self.states["peer_choking"] = False
+        self.states['peer_choking'] = False
 
     def handle_interested(self):
-        self.states["peer_interested"] = True
+        self.states['peer_interested'] = True
 
         if self.am_choking():
             unchoke = message.Unchoke().to_bytes()
             self.send_message(unchoke)
 
     def handle_not_interested(self):
-        self.states["peer_interested"] = False
+        self.states['peer_interested'] = False
 
     def handle_have(self, msg: message.Have):
         self.bitfield[msg.piece_index] = True
@@ -227,7 +201,7 @@ class Peer:
         if self.is_choking() and not self.am_interested():
             interested_msg = message.Interested().to_bytes()
             self.send_message(interested_msg)
-            self.states["am_interested"] = True
+            self.states['am_interested'] = True
 
     def handle_bitfield(self, msg: message.BitField):
         self.bitfield = msg.bitfield
@@ -235,46 +209,35 @@ class Peer:
         if self.is_choking() and not self.am_interested():
             interested_msg = message.Interested().to_bytes()
             self.send_message(interested_msg)
-            self.states["am_interested"] = True
+            self.states['am_interested'] = True
 
     def handle_request(self, msg: message.Request):
         if self.is_interested() and self.is_unchoking():
             pub.sendMessage("PieceRequestFromPeer", request=msg, peer=self)
 
     def handle_piece(self, msg: message.Piece):
-        # print(f"HANDLING_PIECE WITH INDEX: {msg.piece_index}")
         self.piece_manager.receive_block(msg.piece_index, msg.block_offset, msg.block)
 
     def handle_cancel(self, msg: message.Cancel):
         piece_index = msg.piece_index
         piece = self.piece_manager.pieces[piece_index]
-        # it's possible to cancel only pieces that are in PENDING status (currently downloading)
-        # if piece is in FREE or FULL status -> do nothing
         if piece.state == State.PENDING:
             piece.state = State.FREE
             if piece.blocks is not []:
                 piece.blocks = []
-                logging.log(
-                    logging.INFO,
-                    f"Requesting was canceled for piece_hash: {piece.piece_hash}",
-                )
+                logging.log(logging.INFO, f"Requesting was canceled for piece_hash: {piece.piece_hash}")
 
     def handle_port(self):
-        # port = msg.port
-        # if port:
-        # self.port = port
-        logging.log(
-            logging.INFO, f"Port information was updated for peer: {self.ip_address}"
-        )
+        logging.log(logging.INFO, "Port information was updated for peer: {self.ip_address}")
 
     def _handle_keep_alive(self):
         try:
-            keep_alive = message.KeepAlive.from_bytes(self.read_buffer)
-            logging.debug("handle_keep_alive - %s" % self.ip_address)
+            keep_alive = message.KeepAlive.from_bytes(self.buffer)
+            logging.debug('handle_keep_alive - %s' % self.ip_address)
         except message.WrongMessageException:
             return False
         except Exception:
             return False
 
-        self.read_buffer = self.read_buffer[keep_alive.total_length :]
+        self.buffer = self.buffer[keep_alive.total_length:]
         return True

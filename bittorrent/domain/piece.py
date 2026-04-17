@@ -1,6 +1,6 @@
-from block import Block, State
+from bittorrent.domain.block import Block, State
 from math import ceil
-from utilities import BLOCK_SIZE
+from bittorrent.constants import BLOCK_SIZE
 from hashlib import sha1
 from time import time
 
@@ -10,7 +10,7 @@ class Piece:
         self.piece_index: int = piece_index
         self.piece_size: int = piece_size
         self.piece_hash: str = piece_hash
-        self.raw_representation: bytes = b""
+        self.raw_representation: bytes = b''
         self.is_full: bool = False
         self.blocks_number: int = ceil(piece_size / BLOCK_SIZE)
         self.blocks: list[Block]
@@ -27,9 +27,7 @@ class Piece:
             # condition checks if there is a last block with non-standard size in the last piece
             if (self.piece_size % BLOCK_SIZE) > 0:
                 # if so, set size of this block to the remaining data
-                self.blocks[self.blocks_number - 1].block_size = (
-                    self.piece_size % BLOCK_SIZE
-                )
+                self.blocks[self.blocks_number - 1].block_size = self.piece_size % BLOCK_SIZE
 
         else:
             self.blocks.append(Block(block_size=self.piece_size))
@@ -44,9 +42,9 @@ class Piece:
         # TODO: Implement rarest_piece logic for choosing free blocks
 
         """Finds a free block for requesting data from peers
-        Returns:
-            Tuple[int, int, int] -> (piece_index, block_offset, block_size) if block is FREE,
-            otherwise returns None"""
+            Returns:
+                Tuple[int, int, int] -> (piece_index, block_offset, block_size) if block is FREE,
+                otherwise returns None"""
         if self.is_full:
             return None
         for block_index, block in enumerate(self.blocks):
@@ -62,7 +60,6 @@ class Piece:
         if not self.is_full and not self.blocks[piece_index].state == State.FULL:
             self.blocks[piece_index].data = data
             self.blocks[piece_index].state = State.FULL
-            # write received block to the file
 
     def get_block(self, block_offset, block_length):
         return self.raw_representation[block_offset:block_length]
@@ -74,7 +71,7 @@ class Piece:
                 self.blocks[i] = Block()
 
     def verify_piece(self):
-        """Verify piece and writes data to disk"""
+        """Verify piece hash and store merged data"""
         piece = self.__merge_blocks()
         if not self.__valid_piece(piece):
             self._init_blocks()
@@ -83,21 +80,15 @@ class Piece:
         self.is_full = True
         self.raw_representation = piece
 
-        # update bitfield
-
         return True
 
     def __merge_blocks(self):
-        """Merges all blocks data to a single solid piece"""
         buffer = b""
-
         for block in self.blocks:
             buffer += block.data
-
         return buffer
 
     def __valid_piece(self, data):
-        """Checks hash of a piece from the tracker response with the hash of merged blocks"""
         hash_merged_blocks = sha1(data).digest()
         if hash_merged_blocks == self.piece_hash:
             return True
