@@ -1,6 +1,6 @@
-import message
+from bittorrent.domain import message
+from bittorrent.domain.block import State
 from utilities import INFO_HASH
-from block import State
 from torrent import generate_client_id
 
 import socket

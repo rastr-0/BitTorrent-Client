@@ -1,5 +1,5 @@
 from enum import Enum
-from utilities import BLOCK_SIZE  # block_size --> 16KB
+from bittorrent.constants import BLOCK_SIZE
 
 
 class State(Enum):

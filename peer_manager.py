@@ -3,7 +3,7 @@ from threading import Thread
 from pubsub import pub
 
 from peer import Peer
-import message
+from bittorrent.domain import message
 import threading
 from random import choice
 
