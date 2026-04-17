@@ -1,7 +1,7 @@
-from piece import Piece
+from bittorrent.domain.piece import Piece
+from bittorrent.domain.block import State
 from utilities import get_pieces_hash, get_pieces_number, get_piece_length, get_torrent_total_length
 import bitstring
-from block import State
 
 
 class PieceManager:

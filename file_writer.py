@@ -1,6 +1,6 @@
 from threading import Thread
 from utilities import BLOCK_SIZE, BLOCKS_IN_PIECE
-from block import State
+from bittorrent.domain.block import State
 import mmap
 from os.path import getsize
 

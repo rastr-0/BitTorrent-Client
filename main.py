@@ -3,9 +3,9 @@ from torrent import Torrent
 from bcoding import bdecode
 from piece_manager import PieceManager
 import time
-import message
+from bittorrent.domain import message
 from threading import Thread
-from block import State
+from bittorrent.domain.block import State
 from file_writer import BlockSaver
 
 

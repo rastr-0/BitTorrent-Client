@@ -1,6 +1,6 @@
-from block import Block, State
+from bittorrent.domain.block import Block, State
 from math import ceil
-from utilities import BLOCK_SIZE
+from bittorrent.constants import BLOCK_SIZE
 from hashlib import sha1
 from time import time
 
@@ -11,7 +11,6 @@ class Piece:
         self.piece_size: int = piece_size
         self.piece_hash: str = piece_hash
         self.raw_representation: bytes = b''
-        self.piece_hash: str
         self.is_full: bool = False
         self.blocks_number: int = ceil(piece_size / BLOCK_SIZE)
         self.blocks: list[Block]
@@ -61,7 +60,6 @@ class Piece:
         if not self.is_full and not self.blocks[piece_index].state == State.FULL:
             self.blocks[piece_index].data = data
             self.blocks[piece_index].state = State.FULL
-            # write received block to the file
 
     def get_block(self, block_offset, block_length):
         return self.raw_representation[block_offset:block_length]
@@ -73,7 +71,7 @@ class Piece:
                 self.blocks[i] = Block()
 
     def verify_piece(self):
-        """Verify piece and writes data to disk"""
+        """Verify piece hash and store merged data"""
         piece = self.__merge_blocks()
         if not self.__valid_piece(piece):
             self._init_blocks()
@@ -82,21 +80,15 @@ class Piece:
         self.is_full = True
         self.raw_representation = piece
 
-        # update bitfield
-
         return True
 
     def __merge_blocks(self):
-        """Merges all blocks data to a single solid piece"""
         buffer = b""
-
         for block in self.blocks:
             buffer += block.data
-
         return buffer
 
     def __valid_piece(self, data):
-        """Checks hash of a piece from the tracker response with the hash of merged blocks"""
         hash_merged_blocks = sha1(data).digest()
         if hash_merged_blocks == self.piece_hash:
             return True

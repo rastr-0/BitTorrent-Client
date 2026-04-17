@@ -1,4 +1,4 @@
-from utilities import HANDSHAKE_PSTR, LEN_HANDSHAKE_PSTR
+from bittorrent.constants import HANDSHAKE_PSTR, LEN_HANDSHAKE_PSTR
 from struct import pack, unpack
 
 
@@ -77,7 +77,6 @@ class HandShake(Message):
         assert len(self.peer_id) < 255
 
     def to_bytes(self):
-        # 8 reserved bytes
         reserved = b'\x00' * 8
         handshake = pack(">B{}s8s20s20s".format(LEN_HANDSHAKE_PSTR), LEN_HANDSHAKE_PSTR, HANDSHAKE_PSTR, reserved,
                          self.info_hash, self.peer_id)
@@ -299,7 +298,7 @@ class Request(Message):
 
 
 class Piece(Message):
-    """The structure of the requesst:
+    """The structure of the request:
         piece: <len=0009+X>(4 bytes)<id=7>(1 byte)<index>(4 bytes)<begin>(4 bytes)
                 <block>(block_length bytes)"""
     message_id = 7
@@ -335,7 +334,7 @@ class Piece(Message):
 
 
 class Cancel(Message):
-    """The structure of the reqeust:
+    """The structure of the request:
         <len=0013>(4 bytes)<id=8>(1 byte)<index>(4 bytes)<begin>(4 bytes)<length>(4 bytes)"""
     message_id = 8
     payload_length = 12
@@ -354,7 +353,7 @@ class Cancel(Message):
 
     @classmethod
     def from_bytes(cls, payload):
-        _, message_id, piece_index, block_offset, block_length = unpack(">IBIII", cls[:cls.total_length])
+        _, message_id, piece_index, block_offset, block_length = unpack(">IBIII", payload[:cls.total_length])
         if message_id != cls.message_id:
             raise WrongMessageType("Not a cancel message")
 

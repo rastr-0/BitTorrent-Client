@@ -1,5 +1,6 @@
 import logging
 from torrent import Torrent
+from bittorrent.constants import BLOCK_SIZE, BLOCKS_IN_PIECE, HANDSHAKE_PSTR, LEN_HANDSHAKE_PSTR
 
 
 def get_pieces_number(torrent_file: Torrent):
@@ -18,9 +19,5 @@ def get_piece_length(torrent_file: Torrent):
     return torrent_file.piece_length
 
 
-BLOCK_SIZE = 2 ** 14  # 16KB
-BLOCKS_IN_PIECE = 16
 LOG = logging.getLogger('')
 INFO_HASH = None
-HANDSHAKE_PSTR = b"BitTorrent protocol"
-LEN_HANDSHAKE_PSTR = len(HANDSHAKE_PSTR)
