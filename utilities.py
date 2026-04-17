@@ -20,4 +20,3 @@ def get_piece_length(torrent_file: Torrent):
 
 
 LOG = logging.getLogger('')
-INFO_HASH = None

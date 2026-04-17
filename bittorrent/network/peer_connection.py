@@ -1,7 +1,6 @@
 from bittorrent.domain import message
 from bittorrent.domain.block import State
-from utilities import INFO_HASH
-from torrent import generate_client_id
+from bittorrent.domain.torrent_meta import CLIENT_ID
 
 import socket
 from time import time
@@ -12,13 +11,12 @@ import logging
 from struct import unpack
 from pubsub import pub
 
-# TODO: figure out the usage of last_call, now I don't validate in any way difference between curr time and last call
-
 
 class Peer:
-    # FIX: I don't like the way how I pass number_of_pieces, utilities.py has a function for this
-    def __init__(self, piece_manager, number_of_pieces, ip, port=6881):
+    def __init__(self, piece_manager, number_of_pieces: int, ip: str,
+                 info_hash: bytes, port: int = 6881):
         self.piece_manager = piece_manager
+        self.info_hash = info_hash
 
         self.states = {
             'peer_choking': True,
@@ -42,7 +40,6 @@ class Peer:
 
     def read_buffer(self):
         data = b""
-        # parameter for socket.recv function should be small power of 2 -> 4096 (2^12)
         buffer_size = 4096
         self.socket.setblocking(False)
         while True:
@@ -56,7 +53,6 @@ class Peer:
                 else:
                     break
             except socket.error as e:
-                # buffer is empty
                 if e.args[0] == errno.EAGAIN or e.args[0] == errno.EWOULDBLOCK:
                     pass
                 else:
@@ -72,7 +68,7 @@ class Peer:
         if self.socket is None:
             return False
         try:
-            handshake = message.HandShake(info_hash=INFO_HASH, peer_id=generate_client_id()).to_bytes()
+            handshake = message.HandShake(info_hash=self.info_hash, peer_id=CLIENT_ID).to_bytes()
             self.send_message(msg=handshake)
             logging.log(logging.INFO, f"HandShake was sent to user with following ip: {self.ip_address}")
             return True
@@ -220,14 +216,11 @@ class Peer:
             pub.sendMessage("PieceRequestFromPeer", request=msg, peer=self)
 
     def handle_piece(self, msg: message.Piece):
-        # print(f"HANDLING_PIECE WITH INDEX: {msg.piece_index}")
         self.piece_manager.receive_block(msg.piece_index, msg.block_offset, msg.block)
 
     def handle_cancel(self, msg: message.Cancel):
         piece_index = msg.piece_index
         piece = self.piece_manager.pieces[piece_index]
-        # it's possible to cancel only pieces that are in PENDING status (currently downloading)
-        # if piece is in FREE or FULL status -> do nothing
         if piece.state == State.PENDING:
             piece.state = State.FREE
             if piece.blocks is not []:
@@ -235,19 +228,16 @@ class Peer:
                 logging.log(logging.INFO, f"Requesting was canceled for piece_hash: {piece.piece_hash}")
 
     def handle_port(self):
-        # port = msg.port
-        # if port:
-        # self.port = port
         logging.log(logging.INFO, "Port information was updated for peer: {self.ip_address}")
 
     def _handle_keep_alive(self):
         try:
-            keep_alive = message.KeepAlive.from_bytes(self.read_buffer)
+            keep_alive = message.KeepAlive.from_bytes(self.buffer)
             logging.debug('handle_keep_alive - %s' % self.ip_address)
         except message.WrongMessageException:
             return False
         except Exception:
             return False
 
-        self.read_buffer = self.read_buffer[keep_alive.total_length:]
+        self.buffer = self.buffer[keep_alive.total_length:]
         return True

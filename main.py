@@ -1,12 +1,13 @@
 import utilities
 from torrent import Torrent
-from bcoding import bdecode
 from piece_manager import PieceManager
 import time
 from bittorrent.domain import message
-from threading import Thread
 from bittorrent.domain.block import State
+from bittorrent.network.peer_manager import PeerManager
+from bittorrent.network.tracker import HTTPTracker
 from file_writer import BlockSaver
+from threading import Thread
 
 
 class RunBittorrent(Thread):
@@ -18,22 +19,28 @@ class RunBittorrent(Thread):
         self.torrent = Torrent()
         self.torrent.load_file(torrent_path)
 
-        self.file_length = utilities.get_torrent_total_length(self.torrent)
+        self.file_length = self.torrent.file_size
+        self.number_of_pieces = self.torrent.number_of_pieces
 
         self.pieces_manager = PieceManager(self.torrent)
         self.blocks_writer = BlockSaver(self.pieces_manager, self.torrent.get_filename())
 
-        utilities.INFO_HASH = self.torrent.info_hash
-        self.number_of_pieces = utilities.get_pieces_number(self.torrent)
+        tracker = HTTPTracker(
+            announce_url=self.torrent.announce_list[0][0],
+            info_hash=self.torrent.info_hash,
+            peer_id=self.torrent.peer_id,
+        )
+        tracker.set_stats(left=self.file_length)
 
-        from peer_manager import PeerManager
-        self.peer_manager = PeerManager(self.pieces_manager, self.number_of_pieces)
+        self.peer_manager = PeerManager(
+            self.pieces_manager,
+            info_hash=self.torrent.info_hash,
+            number_of_pieces=self.number_of_pieces,
+        )
 
-        peers_list = bdecode(self.torrent.request_to_tracker())['peers']
-
+        peers_list = tracker.get_peers()
         self.peer_manager.connect_to_peers(peers_list)
 
-        # run functions in threads
         self.peer_manager.start()
         self.blocks_writer.start()
 
@@ -80,8 +87,6 @@ class RunBittorrent(Thread):
             if percentage != self.completed_percentage:
                 self.completed_percentage = percentage
                 print(f"Downloaded {self.completed_percentage} %")
-                # active_peers = [peer.ip_address for peer in self.peer_manager.connected_peers if peer.handshake_provided]
-                # print(f"Number of active peers: {len(active_peers)}")
 
 
 if __name__ == '__main__':
