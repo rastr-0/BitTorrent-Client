@@ -26,7 +26,11 @@ class PeerManager(Thread):
         peers_having_piece = []
         for peer in self.connected_peers:
             if peer.handshake_provided:
-                if peer.has_piece(piece_index) and peer.is_unchoking() and peer.am_interested():
+                if (
+                    peer.has_piece(piece_index)
+                    and peer.is_unchoking()
+                    and peer.am_interested()
+                ):
                     peers_having_piece.append(peer)
         if peers_having_piece:
             return choice(peers_having_piece)
@@ -34,9 +38,13 @@ class PeerManager(Thread):
 
     def connect_to_peers(self, peers_list: list) -> None:
         """Establish TCP connection and do handshakes with peers"""
-        print("The process of establishing connections and doing a handshakes started...")
+        print(
+            "The process of establishing connections and doing a handshakes started..."
+        )
         for peer in peers_list:
-            peer_obj = Peer(self.piece_manager, self.number_of_pieces, peer['ip'], peer['port'])
+            peer_obj = Peer(
+                self.piece_manager, self.number_of_pieces, peer["ip"], peer["port"]
+            )
             if peer_obj.connect():
                 handshake_sent = peer_obj.handshake()
                 if handshake_sent:
@@ -57,8 +65,10 @@ class PeerManager(Thread):
                 try:
                     peer.read_buffer()
                 except Exception:
-                    logging.error(f"Error occurred while reading socket "
-                                  f"for the peer with following ip: {peer.ip_address} and port: {peer.port}")
+                    logging.error(
+                        f"Error occurred while reading socket "
+                        f"for the peer with following ip: {peer.ip_address} and port: {peer.port}"
+                    )
                     self.disconnect_peer(peer)
 
                 for peer_message in peer.get_messages():
@@ -115,17 +125,26 @@ class PeerManager(Thread):
         if peer in self.connected_peers:
             try:
                 peer.socket.close()
-            except ConnectionRefusedError or ConnectionError:
-                logging.log(logging.ERROR, "Unable to establish connection with peer: {peer.ip_address} : {peer.port}")
+            except (ConnectionRefusedError, ConnectionError):
+                logging.log(
+                    logging.ERROR,
+                    "Unable to establish connection with peer: {peer.ip_address} : {peer.port}",
+                )
             self.connected_peers.remove(peer)
 
     def request_of_piece(self, request=None, peer=None):
         if not request or not peer:
             return
-        piece_index, block_offset, block_length = request.piece_index, request.block_offset, request.block_length
+        piece_index, block_offset, block_length = (
+            request.piece_index,
+            request.block_offset,
+            request.block_length,
+        )
 
         block = self.piece_manager.get_block(piece_index, block_offset, block_length)
 
         if block:
-            piece_msg = message.Piece(piece_index, block_offset, block_length, block).to_bytes()
+            piece_msg = message.Piece(
+                piece_index, block_offset, block_length, block
+            ).to_bytes()
             peer.send_message(piece_msg)

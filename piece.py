@@ -10,8 +10,7 @@ class Piece:
         self.piece_index: int = piece_index
         self.piece_size: int = piece_size
         self.piece_hash: str = piece_hash
-        self.raw_representation: bytes = b''
-        self.piece_hash: str
+        self.raw_representation: bytes = b""
         self.is_full: bool = False
         self.blocks_number: int = ceil(piece_size / BLOCK_SIZE)
         self.blocks: list[Block]
@@ -28,7 +27,9 @@ class Piece:
             # condition checks if there is a last block with non-standard size in the last piece
             if (self.piece_size % BLOCK_SIZE) > 0:
                 # if so, set size of this block to the remaining data
-                self.blocks[self.blocks_number - 1].block_size = self.piece_size % BLOCK_SIZE
+                self.blocks[self.blocks_number - 1].block_size = (
+                    self.piece_size % BLOCK_SIZE
+                )
 
         else:
             self.blocks.append(Block(block_size=self.piece_size))
@@ -43,9 +44,9 @@ class Piece:
         # TODO: Implement rarest_piece logic for choosing free blocks
 
         """Finds a free block for requesting data from peers
-            Returns:
-                Tuple[int, int, int] -> (piece_index, block_offset, block_size) if block is FREE,
-                otherwise returns None"""
+        Returns:
+            Tuple[int, int, int] -> (piece_index, block_offset, block_size) if block is FREE,
+            otherwise returns None"""
         if self.is_full:
             return None
         for block_index, block in enumerate(self.blocks):

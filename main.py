@@ -21,15 +21,18 @@ class RunBittorrent(Thread):
         self.file_length = utilities.get_torrent_total_length(self.torrent)
 
         self.pieces_manager = PieceManager(self.torrent)
-        self.blocks_writer = BlockSaver(self.pieces_manager, self.torrent.get_filename())
+        self.blocks_writer = BlockSaver(
+            self.pieces_manager, self.torrent.get_filename()
+        )
 
         utilities.INFO_HASH = self.torrent.info_hash
         self.number_of_pieces = utilities.get_pieces_number(self.torrent)
 
         from peer_manager import PeerManager
+
         self.peer_manager = PeerManager(self.pieces_manager, self.number_of_pieces)
 
-        peers_list = bdecode(self.torrent.request_to_tracker())['peers']
+        peers_list = bdecode(self.torrent.request_to_tracker())["peers"]
 
         self.peer_manager.connect_to_peers(peers_list)
 
@@ -48,7 +51,9 @@ class RunBittorrent(Thread):
                 if self.pieces_manager.pieces[current_index].is_full:
                     continue
 
-                peer_with_piece = self.peer_manager.get_random_peer_with_piece(current_index)
+                peer_with_piece = self.peer_manager.get_random_peer_with_piece(
+                    current_index
+                )
                 if not peer_with_piece:
                     continue
 
@@ -59,7 +64,9 @@ class RunBittorrent(Thread):
                 self.pieces_manager.pieces[current_index].update_block_status()
 
                 piece_index, block_offset, block_length = data
-                piece_request = message.Request(piece_index, block_offset, block_length).to_bytes()
+                piece_request = message.Request(
+                    piece_index, block_offset, block_length
+                ).to_bytes()
                 if peer_with_piece is not None:
                     if not peer_with_piece.healthy:
                         self.peer_manager.disconnect_peer(peer_with_piece)
@@ -72,11 +79,17 @@ class RunBittorrent(Thread):
         blocks_completed = 0
 
         for i, piece in enumerate(self.pieces_manager.pieces):
-            blocks_completed += sum(1 for block in piece.blocks if block.state == State.FULL)
+            blocks_completed += sum(
+                1 for block in piece.blocks if block.state == State.FULL
+            )
 
         if blocks_completed > 0 and blocks_completed != self.completed_blocks_number:
             self.completed_blocks_number = blocks_completed
-            percentage = round((self.completed_blocks_number // utilities.BLOCKS_IN_PIECE * 100) / self.number_of_pieces, 2)
+            percentage = round(
+                (self.completed_blocks_number // utilities.BLOCKS_IN_PIECE * 100)
+                / self.number_of_pieces,
+                2,
+            )
             if percentage != self.completed_percentage:
                 self.completed_percentage = percentage
                 print(f"Downloaded {self.completed_percentage} %")
@@ -84,7 +97,7 @@ class RunBittorrent(Thread):
                 # print(f"Number of active peers: {len(active_peers)}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("Your .torrent file: ")
     torrent_file = str(input())
 

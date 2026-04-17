@@ -9,7 +9,7 @@ class State(Enum):
 
 
 class Block:
-    def __init__(self, state=State.FREE, block_size=BLOCK_SIZE, data=b'', last_call=0):
+    def __init__(self, state=State.FREE, block_size=BLOCK_SIZE, data=b"", last_call=0):
         self.state = state
         self.block_size = block_size
         self.data = data

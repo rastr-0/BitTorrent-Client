@@ -1,5 +1,10 @@
 from piece import Piece
-from utilities import get_pieces_hash, get_pieces_number, get_piece_length, get_torrent_total_length
+from utilities import (
+    get_pieces_hash,
+    get_pieces_number,
+    get_piece_length,
+    get_torrent_total_length,
+)
 import bitstring
 from block import State
 
@@ -24,11 +29,21 @@ class PieceManager:
             # length of each piece_hash is 20 bytes
             start_index = i * 20
             end_index = start_index + 20
-            pieces.append(Piece(i, self.piece_length, self.pieces_hash[start_index:end_index]))
+            pieces.append(
+                Piece(i, self.piece_length, self.pieces_hash[start_index:end_index])
+            )
 
         # the last one piece case
-        last_piece_length = self.total_pieces_length - (self.pieces_number - 1) * self.piece_length
-        pieces.append(Piece(self.pieces_number - 1, last_piece_length, self.pieces_hash[start_index:end_index]))
+        last_piece_length = (
+            self.total_pieces_length - (self.pieces_number - 1) * self.piece_length
+        )
+        pieces.append(
+            Piece(
+                self.pieces_number - 1,
+                last_piece_length,
+                self.pieces_hash[start_index:end_index],
+            )
+        )
 
         return pieces
 
@@ -60,10 +75,9 @@ class PieceManager:
                 self.completed_pieces += 1
 
     def number_of_full_blocks(self, piece_index):
-        return sum(1 for block in self.pieces[piece_index].blocks if block.state == State.FULL)
+        return sum(
+            1 for block in self.pieces[piece_index].blocks if block.state == State.FULL
+        )
 
     def update_bitfield(self, piece_index):
         self.bitfield[piece_index] = 1
-
-
-

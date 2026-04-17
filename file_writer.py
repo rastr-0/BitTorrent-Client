@@ -27,7 +27,9 @@ class BlockSaver(Thread):
 
     def _write_block(self, piece_index):
         """This function calculates starting point and offsets for writing block to the right position"""
-        for block_index, block in enumerate(self.piece_manager.pieces[piece_index].blocks):
+        for block_index, block in enumerate(
+            self.piece_manager.pieces[piece_index].blocks
+        ):
             if block.state == State.FULL:
                 piece_offset = piece_index * self.piece_length
                 block_start = block_index * BLOCK_SIZE
@@ -37,8 +39,12 @@ class BlockSaver(Thread):
                     with open(self.file_path, "r+b") as file:
                         # os.path function
                         file_size = getsize(self.file_path)
-                        with mmap.mmap(file.fileno(), length=file_size, access=mmap.ACCESS_WRITE) as mmap_file:
-                            mmap_file[piece_offset+block_start:piece_offset+block_offset] = block.data
+                        with mmap.mmap(
+                            file.fileno(), length=file_size, access=mmap.ACCESS_WRITE
+                        ) as mmap_file:
+                            mmap_file[
+                                piece_offset + block_start : piece_offset + block_offset
+                            ] = block.data
                             mmap_file.flush()
                             self.saved_blocks += 1
                 except (OSError, ValueError, TypeError) as e:

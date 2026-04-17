@@ -32,18 +32,18 @@ class Torrent:
         self.number_of_pieces: int = 0
 
     def load_file(self, file):
-        with open(file, mode='rb') as binary_file:
+        with open(file, mode="rb") as binary_file:
             content = bdecode(binary_file)
 
         self.decoded_file = content
-        self.piece_length = self.decoded_file['info']['piece length']
-        self.pieces_hash = self.decoded_file['info']['pieces']
-        self.file_size = self.decoded_file['info']['length']
-        self.event = 'started'
+        self.piece_length = self.decoded_file["info"]["piece length"]
+        self.pieces_hash = self.decoded_file["info"]["pieces"]
+        self.file_size = self.decoded_file["info"]["length"]
+        self.event = "started"
         self.uploaded = 0
         self.downloaded = 0
         self.left = self.file_size
-        raw_info_hash = bencode(self.decoded_file['info'])
+        raw_info_hash = bencode(self.decoded_file["info"])
         self.info_hash = sha1(raw_info_hash).digest()
         self.peer_id = generate_client_id()
         self.port = 6881
@@ -52,11 +52,11 @@ class Torrent:
 
     def __get_trackers(self):
         # handle multi-file structure
-        if 'announce_list' in self.decoded_file:
-            return self.decoded_file['announce-list']
+        if "announce_list" in self.decoded_file:
+            return self.decoded_file["announce-list"]
         # handle single-file structure
         else:
-            return [[self.decoded_file['announce']]]
+            return [[self.decoded_file["announce"]]]
 
     def request_to_tracker(self):
         params = {
@@ -66,14 +66,16 @@ class Torrent:
             "uploaded": self.uploaded,
             "downloaded": self.downloaded,
             "left": self.left,
-            "event": self.event
+            "event": self.event,
         }
 
-        tracker_response = requests.get(self.announce_list[0][0], params=params, verify=False)
+        tracker_response = requests.get(
+            self.announce_list[0][0], params=params, verify=False
+        )
         if tracker_response:
             return tracker_response.text
         else:
             return "Error occurred"
 
     def get_filename(self):
-        return self.decoded_file['info']['name']
+        return self.decoded_file["info"]["name"]
